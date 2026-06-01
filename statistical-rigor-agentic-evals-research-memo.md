@@ -1,6 +1,6 @@
 # Statistical Rigor for Agentic Evals
 
-## 1. Answer First
+## 1. Short Thesis
 
 Agentic evals should be treated as **stochastic, clustered, trajectory-valued reliability studies**, not as flat IID benchmark scores.
 
