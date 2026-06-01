@@ -8,11 +8,12 @@ That means an eval is a measurement protocol over a full system: model, harness,
 
 This framing extends the ordinary statistical view of language-model evals. Miller argues that evals should be treated as statistical experiments with uncertainty intervals, pairwise comparisons, and power planning ([Miller, 2024](https://arxiv.org/abs/2411.00640)). Agentic evals need the same discipline, but the data are richer and less IID: tasks are clustered, rollouts are repeated, judges and simulators can be noisy, and outcomes depend on trajectories through tools and state.
 
-The protocol below has three pieces:
+The protocol below has four pieces:
 
 1. **Ontology:** define the objects being measured: system, task, rollout, trajectory, event.
-2. **Instrumentation:** log the core fields needed for comparison, plus conditional/eval-specific fields for diagnosis.
-3. **Pipeline:** design the eval, collect trajectories, assess uncertainty, explain failures, and decide the next measurement step.
+2. **Instrumentation principle:** log a stable core plus conditional extensions only when they answer a measurement question.
+3. **Decision map:** connect each evaluation question to the evidence and protocol stage that can answer it.
+4. **Pipeline:** design the eval, collect trajectories, assess uncertainty, explain failures, and decide the next measurement step.
 
 ## 2. Ontology / Universe of Measurement
 
@@ -59,193 +60,37 @@ This ontology matters because different claims require different units of infere
 
 Recent agent benchmarks already point in this direction. For example, tau2-bench evaluates conversational agents in a shared environment where user and agent can both affect state, which makes final outcomes depend on coordination, tool use, and state transitions rather than one static answer ([tau2-bench](https://arxiv.org/abs/2506.07982)).
 
-## 3. Log Schema: Core + Extensions
+## 3. Instrumentation Principle
 
-The log schema is recommended instrumentation, not a universal mandatory schema. Core fields support comparability; extensions support diagnosis when the eval design can identify them.
+The log is part of the measurement instrument. Final scores alone cannot support clustered uncertainty estimates, trajectory diagnosis, or future eval design.
 
-A **core + extensions log schema** means: keep a small stable core across evals, then add conditional or eval-specific fields only when they answer a concrete measurement question. The core should be stable across evals. Conditional and eval-specific fields depend on whether the benchmark uses judges, simulators, observable state, safety labels, or domain-specific policies.
+Use a **core + extensions** approach: keep a small stable core across evals, then add conditional or eval-specific fields only when they answer a concrete measurement question. The detailed schema belongs after the protocol, because the fields should follow from the claim being tested.
 
-### Core Fields
+## 4. Decision Map
 
-Core fields are the minimum needed to estimate score uncertainty, preserve pairing, and reconstruct ordered trajectories.
+The framework should answer four decision questions. Each question maps to a different kind of evidence and a different part of the protocol.
 
-Rollout-level core:
-
-```text
-run_id
-benchmark_id
-task_id
-system_id
-model_id
-harness_id
-tool_environment_version
-seed
-temperature / decoding params
-date / API version / model snapshot
-final_outcome
-cost
-latency
-timeout_flag
-```
-
-Trajectory-level core:
-
-```text
-run_id
-event_id
-timestamp or step_index
-actor: user / agent / tool / judge / environment
-event_category
-event_type
-tool_name, if applicable
-event_cost
-event_latency
-```
-
-Use two-level event typing:
-
-```text
-event_category = message | tool | state | check | error | control | intervention | safety
-event_type     = eval-specific finer label
-```
-
-For example, `event_category = tool` could include `event_type = tool_call`, `tool_result`, or `tool_timeout`. A safety eval might add `unsafe_tool_attempt`; a customer-service eval might add `refund_policy_check`.
-
-### Conditional Fields
-
-Add these when the eval design can support them:
-
-```text
-scenario_cluster / domain
-simulator_id
-judge_id / verifier_id
-expert_label_id
-state_before / state_after, if observable
-state_mutation_flag
-error_flag
-policy_violation_flag
-recovery_flag
-judge_confidence
-simulator_profile
-```
-
-### Eval-Specific Extensions
-
-Add benchmark- or product-specific labels only when they answer a concrete measurement question:
-
-```text
-domain taxonomy labels
-workflow step labels
-safety / side-effect taxonomy
-policy-specific violation labels
-business severity label
-customer-impact label
-near-miss label
-```
-
-Example `event_type` values:
-
-```text
-agent_message, user_message, tool_call, tool_result, tool_error,
-state_mutation, verification_check, policy_check, retry, loop,
-timeout, manual_intervention, unsafe_or_catastrophic_event
-```
-
-The schema should be treated as part of the measurement instrument. If a failure mode is not logged, it can still affect the score, but it cannot be attributed, modeled, or used to improve the eval.
-
-## 4. Goals and Questions
-
-The framework should answer four decision questions: how uncertain the score is, why failures happen, how to spend the next eval budget, and what production-reliability evidence would require.
-
-### Goal A: Estimate Uncertainty of Final Scores
-
-Questions:
-
-- What is the score over the target task population?
-- How wide is the uncertainty interval?
-- Is `S1` meaningfully better than `S2`?
-- How stable is the ranking under task/domain resampling?
-
-| Method | Area / source discipline | Rationale / example |
+| Decision question | Evidence needed | Where the protocol handles it |
 | --- | --- | --- |
-| Hierarchical bootstrap | Resampling / clustered inference | Resample scenario clusters/tasks first, then rollouts, to avoid treating repeated runs as independent tasks. |
-| Paired comparisons | Experimental design / comparative inference | Compare `S1` and `S2` on the same task distribution so task difficulty cancels where possible. |
-| Mixed or Bayesian hierarchical models | Hierarchical modeling | Estimate system effects while accounting for task, domain, rollout, judge, or simulator variation. |
-| Multiple-comparison correction | Simultaneous inference | Avoid overclaiming when comparing many systems or many pairwise gaps. |
-| Simulation-based power analysis | Clinical trial design / experimental design | Estimate whether a proposed budget can detect `Delta >= delta_min`. |
+| How uncertain is the score, and are two systems meaningfully different? | Task/domain-clustered outcomes, paired runs where possible, repeated rollouts, judge/simulator metadata | Stage 3: assess results; Stage 4: rerank existing evals |
+| Why do failures happen, and does the same final score hide different reliability profiles? | Trajectory events, recurrent errors, process variants, failure labels, state or policy violations | Stage 2: collect trajectories; Stage 3: model variance and failure modes |
+| How should the next eval budget be spent? | Pilot variance, scenario coverage, minimum detectable effect, high-variance or uncovered task regions | Stage 1: eval design; Stage 6: create/refine own evals |
+| What would production-reliability evidence require? | Stress conditions, perturbations, fault injection, rare-event bounds, production event logs | Stage 5: production use |
 
-### Goal B: Explain Variance and Failure Modes
-
-Questions:
-
-- Which tasks, domains, or workflow clusters cause instability?
-- Which trajectory events predict failure?
-- Are failures random, clustered, or process-specific?
-- Does the same final score hide different reliability profiles?
-
-| Method | Area / source discipline | Rationale / example |
-| --- | --- | --- |
-| Variance decomposition | Hierarchical modeling | Estimate whether instability comes from tasks, domains, rollouts, judges, simulators, or system-by-task interactions. |
-| Recurrent-event models | Recurrent-event analysis / survival analysis | Model repeated tool errors, retries, loops, policy checks, or wrong state mutations inside `tau`. |
-| Trajectory features | Event-log analysis / feature engineering | Convert traces into predictors such as `tool_error_count`, `loop_flag`, or `state_mutation_before_check`. |
-| Process discovery and conformance checking | Process mining | Discover common trajectories and compare observed paths to intended workflow or policy. |
-| Failure taxonomies | Error analysis / benchmark design | Separate final task failure, side effect, policy violation, wrong state mutation, and catastrophic failure. |
-| Ablations, perturbations, and stress tests | Reliability engineering / robustness evaluation | Test whether failures depend on scaffold components, wording changes, tool faults, or degraded environment state. |
-
-### Goal C: Improve Future Eval Design
-
-Questions:
-
-- Should the next budget buy more tasks, rollouts, judges, domains, perturbations, or stress cases?
-- Which task clusters are redundant?
-- Which scenario regions are uncovered?
-- Which trajectory logs are worth collecting?
-- What minimum detectable effect matters for product decisions?
-
-| Method | Area / source discipline | Rationale / example |
-| --- | --- | --- |
-| Power analysis | Clinical trial design / experimental design | Choose task/run/judge counts for a practically meaningful effect size. |
-| Adaptive eval design | Adaptive trials / sequential design | Use pilot variance to decide whether the next budget buys more tasks, rollouts, judges, or stress cases. |
-| Scenario coverage | Benchmark design | Ensure domains, task types, user behaviors, tool states, and risk profiles are represented. |
-| Active task selection | Active learning / optimal design | Add tasks where uncertainty, failure rate, or decision value is highest. |
-| Held-out region testing | Generalization / benchmark design | Test scenario regions not used to tune prompts, scaffolds, or policies. |
-| Degradation testing | Reliability engineering | Measure how performance decays under harder task conditions or degraded environment state. |
-
-HELM is the relevant precedent for scenario and metric coverage: evals should cover meaningful scenarios and desiderata rather than collapse everything into one scalar too early ([HELM](https://arxiv.org/abs/2211.09110)). BetterBench makes the same point from the benchmark-quality side: benchmark design, statistical reporting, and reproducibility are part of eval rigor, not afterthoughts ([BetterBench](https://arxiv.org/abs/2411.12990)).
-
-### Goal D: Support Future Production Reliability
-
-Questions:
-
-- How does `S = M x H x E` respond to controlled changes?
-- How does reliability degrade under semantic perturbations or tool faults?
-- What is the upper bound on catastrophic failure probability?
-- Are new versions improving, overfitting, or shifting failure modes?
-
-| Method | Area / source discipline | Rationale / example |
-| --- | --- | --- |
-| Reliability demonstration testing | Reliability engineering | Support claims like failure probability below a threshold under stated assumptions. |
-| Zero-failure upper bounds | Rare-event inference | If no catastrophic failures are observed, report an upper confidence bound rather than "safe." |
-| Fault injection | Robustness / reliability engineering | Inject tool/API/environment faults and estimate how `S = M x H x E` responds. |
-| Degradation/stress testing | Stress testing / robustness | Increase task or environment difficulty and estimate reliability decay. |
-| Reliability growth models | Reliability engineering / monitoring | Track whether new versions reduce failures or shift them elsewhere. |
-| Statistical process control | Quality monitoring | Monitor production event rates for drift, regressions, or out-of-control failure modes. |
-| Production event-log monitoring | Observability / process mining | Use production traces to update eval tasks and detect workflow deviations. |
-
-This is future work for the memo, but it should shape the ontology now. Production reliability claims require evidence about the whole `M x H x E` system, not just model-level leaderboard scores.
+The point is not to apply every method to every eval. The point is to choose the method that matches the claim, unit of inference, and available evidence.
 
 ## 5. Process Overview
 
-The pipeline is cyclic: each eval should produce both a result and evidence for improving the next eval design.
+Stages 0-3 are the core protocol. Stages 4-6 are applications and extensions: reranking existing evals, supporting production reliability claims, and maintaining company evals. The cycle matters because each eval should produce both a result and evidence for improving the next design.
 
 ```mermaid
 flowchart TD
     A["Stage 0: Define ontology + estimand"] --> B["Stage 1: Eval design"]
     B --> C["Stage 2: Evaluation / data collection"]
     C --> D["Stage 3: Assess results"]
-    D --> E["Stage 4: Rerank / compare existing evals"]
-    E --> F["Stage 5: Production use"]
-    F --> G["Stage 6: Create / refine own evals"]
+    D --> E["Stage 4: Rerank existing evals"]
+    D --> F["Stage 5: Production use"]
+    D --> G["Stage 6: Create / refine own evals"]
     G --> B
 
     B --> B1["Power analysis"]
@@ -278,7 +123,7 @@ flowchart TD
 
 ## 6. Stage-by-Stage Protocol
 
-Each stage should start from the claim it supports, then choose methods that match the available unit of evidence.
+Each stage starts from the claim it supports, then chooses methods that match the available unit of evidence. Stages 0-3 are the core protocol; Stages 4-6 show how the same protocol applies to existing leaderboards, production reliability, and company eval maintenance.
 
 ### Stage 0: Define Ontology and Estimand
 
@@ -370,7 +215,7 @@ Guardrail: adaptation rules should be pre-specified, or the result should be lab
 scenario = domain + task type + user behavior + tool state + risk profile
 ```
 
-Coverage matters because a narrow task distribution can create false confidence. A score from easy/refund workflows may not generalize to account-closure or high-risk state-mutation workflows.
+Coverage matters because a narrow task distribution can create false confidence. A score from easy/refund workflows may not generalize to account-closure or high-risk state-mutation workflows. BetterBench makes the same point from the benchmark-quality side: statistical reporting, reproducibility, and coverage are part of eval rigor, not afterthoughts ([BetterBench](https://arxiv.org/abs/2411.12990)).
 
 4. **Catastrophic-risk design.** Area: rare-event reliability / stress-test design. If a bad outcome is plausible, do not wait for ordinary random evals to encounter it. Add targeted probes, adversarial or stress scenarios, and explicit rare-event bounds. Define near misses as observable precursor events, for example: unsafe tool call attempted but blocked, wrong state mutation proposed but not committed, policy check skipped, or recovery only after simulator intervention.
 
@@ -448,6 +293,7 @@ ReliabilityBench is relevant here because it evaluates repeated attempts, semant
 
 - What is the uncertainty interval for the score?
 - Are two systems meaningfully different?
+- How stable is the ranking under task/domain resampling?
 - Which domains/tasks drive the difference?
 - Which trajectory features predict failure?
 - What can we say about catastrophic failures if none were observed?
@@ -541,6 +387,7 @@ So 0 catastrophic failures in 300 independent runs supports roughly `p_cat <= 1%
 - hierarchical bootstrap over tasks/domains to produce rank distributions under resampling;
 - task-clustered confidence intervals;
 - paired pairwise comparison matrix;
+- multiple-comparison correction or practical-equivalence thresholds for many systems;
 - bootstrap rank distribution;
 - mixed-effects variance decomposition;
 - trajectory/process features explaining rank instability.
@@ -623,7 +470,101 @@ This is not ordinary leaderboard scoring. It is deployment-risk evidence.
 
 The output of this stage cycles back into eval design.
 
-## 7. Potential Next Steps
+## 7. Log Schema: Core + Extensions
+
+The log schema is recommended instrumentation, not a universal mandatory schema. Core fields support comparability; extensions support diagnosis when the eval design can identify them.
+
+A **core + extensions log schema** means: keep a small stable core across evals, then add conditional or eval-specific fields only when they answer a concrete measurement question. The core should be stable across evals. Conditional and eval-specific fields depend on whether the benchmark uses judges, simulators, observable state, safety labels, or domain-specific policies.
+
+### Core Fields
+
+Core fields are the minimum needed to estimate score uncertainty, preserve pairing, and reconstruct ordered trajectories.
+
+Rollout-level core:
+
+```text
+run_id
+benchmark_id
+task_id
+system_id
+model_id
+harness_id
+tool_environment_version
+seed
+temperature / decoding params
+date / API version / model snapshot
+final_outcome
+cost
+latency
+timeout_flag
+```
+
+Trajectory-level core:
+
+```text
+run_id
+event_id
+timestamp or step_index
+actor: user / agent / tool / judge / environment
+event_category
+event_type
+tool_name, if applicable
+event_cost
+event_latency
+```
+
+Use two-level event typing:
+
+```text
+event_category = message | tool | state | check | error | control | intervention | safety
+event_type     = eval-specific finer label
+```
+
+For example, `event_category = tool` could include `event_type = tool_call`, `tool_result`, or `tool_timeout`. A safety eval might add `unsafe_tool_attempt`; a customer-service eval might add `refund_policy_check`.
+
+### Conditional Fields
+
+Add these when the eval design can support them:
+
+```text
+scenario_cluster / domain
+simulator_id
+judge_id / verifier_id
+expert_label_id
+state_before / state_after, if observable
+state_mutation_flag
+error_flag
+policy_violation_flag
+recovery_flag
+judge_confidence
+simulator_profile
+```
+
+### Eval-Specific Extensions
+
+Add benchmark- or product-specific labels only when they answer a concrete measurement question:
+
+```text
+domain taxonomy labels
+workflow step labels
+safety / side-effect taxonomy
+policy-specific violation labels
+business severity label
+customer-impact label
+near-miss label
+```
+
+Example `event_type` values:
+
+```text
+agent_message, user_message, tool_call, tool_result, tool_error,
+state_mutation, verification_check, policy_check, retry, loop,
+timeout, manual_intervention, unsafe_or_catastrophic_event
+```
+
+The schema should be treated as part of the measurement instrument. If a failure mode is not logged, it can still affect the score, but it cannot be attributed, modeled, or used to improve the eval.
+
+## 8. Potential Next Steps
 
 These are possible workstreams, not a ranked priority list.
 
