@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 import pandas as pd
 
 try:
@@ -66,7 +68,9 @@ outcome = pn.widgets.Select(name="Outcome", options=OUTCOME_OPTIONS, value="All"
 language = pn.widgets.Select(name="Language", options=LANGUAGE_OPTIONS, value="All")
 repository = pn.widgets.Select(name="Repository", options=REPOSITORY_OPTIONS, value="All")
 models = pn.widgets.MultiChoice(name="Model + effort", options=MODEL_OPTIONS, value=[])
-draws = pn.widgets.IntInput(name="Bootstrap draws", value=2_000, start=100, end=20_000, step=100)
+DEFAULT_DRAWS = int(os.environ.get("DEEPSWE_DEFAULT_DRAWS", "2_000"))
+
+draws = pn.widgets.IntInput(name="Bootstrap draws", value=DEFAULT_DRAWS, start=100, end=20_000, step=100)
 seed = pn.widgets.IntInput(name="Random seed", value=0, start=0, end=1_000_000)
 variance_dimension = pn.widgets.Select(
     name="Variance dimension",
