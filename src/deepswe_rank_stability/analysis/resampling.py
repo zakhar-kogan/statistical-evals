@@ -31,6 +31,7 @@ class DimensionBootstrapResult:
 def filter_trials(
     trials: pd.DataFrame,
     *,
+    eval_id: str | None = None,
     source: str | None = None,
     eval_scope: str | None = None,
     included_in_score: bool | None = None,
@@ -38,8 +39,11 @@ def filter_trials(
     language: str | None = None,
     repository: str | None = None,
     model_keys: Iterable[str] | None = None,
+    system_ids: Iterable[str] | None = None,
 ) -> pd.DataFrame:
     frame = trials.copy()
+    if eval_id is not None and "eval_id" in frame.columns:
+        frame = frame[frame["eval_id"] == eval_id]
     if source is not None:
         frame = frame[frame["source"] == source]
     if eval_scope is not None:
@@ -54,24 +58,48 @@ def filter_trials(
         frame = frame[frame["repository"] == repository]
     if model_keys is not None:
         frame = frame[frame["model_key"].isin(set(model_keys))]
+    if system_ids is not None:
+        system_column = "system_id" if "system_id" in frame.columns else "model_key"
+        frame = frame[frame[system_column].isin(set(system_ids))]
     return frame
 
 
-def aggregate_task_model_scores(trials: pd.DataFrame) -> pd.DataFrame:
-    required = {"task_name", "model_key", "source", "eval_scope", "score_value", "passed"}
+def _first_existing_column(frame: pd.DataFrame, candidates: tuple[str, ...]) -> str:
+    for column in candidates:
+        if column in frame.columns:
+            return column
+    raise ValueError(f"frame is missing all expected columns: {', '.join(candidates)}")
+
+
+def aggregate_task_model_scores(
+    trials: pd.DataFrame,
+    *,
+    score_column: str = "score_value",
+    task_column: str | None = None,
+    system_column: str | None = None,
+) -> pd.DataFrame:
+    task_column = task_column or _first_existing_column(trials, ("task_name", "task_id"))
+    system_column = system_column or _first_existing_column(trials, ("model_key", "system_id"))
+    required = {task_column, system_column, score_column}
     missing = sorted(required - set(trials.columns))
     if missing:
         raise ValueError(f"trials frame is missing required columns: {missing}")
 
-    trial_count = ("trial_name", "count") if "trial_name" in trials.columns else ("score_value", "count")
+    pass_agg = ("passed", "mean") if "passed" in trials.columns else (score_column, "mean")
+    trial_count = ("trial_name", "count") if "trial_name" in trials.columns else (score_column, "count")
+    group_columns = [task_column, system_column]
+    for optional in ["source", "eval_scope"]:
+        if optional in trials.columns:
+            group_columns.append(optional)
     return (
-        trials.groupby(["task_name", "model_key", "source", "eval_scope"], dropna=False)
+        trials.groupby(group_columns, dropna=False)
         .agg(
-            score_value=("score_value", "mean"),
-            pass_rate=("passed", "mean"),
+            score_value=(score_column, "mean"),
+            pass_rate=pass_agg,
             n_trials=trial_count,
         )
         .reset_index()
+        .rename(columns={task_column: "task_name", system_column: "model_key"})
     )
 
 
@@ -105,11 +133,12 @@ def bootstrap_rank_stability(
     *,
     draws: int = DEFAULT_DRAWS,
     seed: int = 0,
+    score_column: str = "score_value",
 ) -> BootstrapResult:
     if draws <= 0:
         raise ValueError("draws must be positive")
 
-    matrix = score_matrix(aggregate_task_model_scores(trials))
+    matrix = score_matrix(aggregate_task_model_scores(trials, score_column=score_column))
     if matrix.empty:
         raise ValueError("no task-model scores are available after filtering")
 
@@ -150,6 +179,7 @@ def bootstrap_by_dimension(
     seed: int = 0,
     min_tasks: int = DEFAULT_MIN_SLICE_TASKS,
     min_models: int = DEFAULT_MIN_SLICE_MODELS,
+    score_column: str = "score_value",
 ) -> DimensionBootstrapResult:
     if dimension not in trials.columns:
         raise ValueError(f"dimension {dimension!r} is not present in trials")
@@ -183,7 +213,12 @@ def bootstrap_by_dimension(
             )
             continue
 
-        result = bootstrap_rank_stability(slice_trials, draws=draws, seed=seed + slice_index)
+        result = bootstrap_rank_stability(
+            slice_trials,
+            draws=draws,
+            seed=seed + slice_index,
+            score_column=score_column,
+        )
         summary = result.leaderboard.copy()
         summary.insert(0, "dimension", dimension)
         summary.insert(1, "slice_value", str(slice_value))
@@ -200,7 +235,12 @@ def bootstrap_by_dimension(
     return DimensionBootstrapResult(summaries=summary_frame, skipped_slices=skipped_frame)
 
 
-def model_task_coverage_by_dimension(trials: pd.DataFrame, *, dimension: str) -> pd.DataFrame:
+def model_task_coverage_by_dimension(
+    trials: pd.DataFrame,
+    *,
+    dimension: str,
+    score_column: str = "score_value",
+) -> pd.DataFrame:
     if dimension not in trials.columns:
         raise ValueError(f"dimension {dimension!r} is not present in trials")
 
@@ -208,7 +248,7 @@ def model_task_coverage_by_dimension(trials: pd.DataFrame, *, dimension: str) ->
     for slice_value, slice_trials in trials.dropna(subset=[dimension]).groupby(
         dimension, sort=True, dropna=False, observed=False
     ):
-        matrix = score_matrix(aggregate_task_model_scores(slice_trials))
+        matrix = score_matrix(aggregate_task_model_scores(slice_trials, score_column=score_column))
         task_count = int(matrix.shape[0])
         for model_key in matrix.columns:
             observed_tasks = int(matrix[model_key].notna().sum())
@@ -225,7 +265,12 @@ def model_task_coverage_by_dimension(trials: pd.DataFrame, *, dimension: str) ->
     return pd.DataFrame(rows)
 
 
-def cost_diagnostics_by_dimension(trials: pd.DataFrame, *, dimension: str) -> pd.DataFrame:
+def cost_diagnostics_by_dimension(
+    trials: pd.DataFrame,
+    *,
+    dimension: str,
+    score_column: str = "score_value",
+) -> pd.DataFrame:
     if dimension not in trials.columns:
         raise ValueError(f"dimension {dimension!r} is not present in trials")
     available = [
@@ -245,7 +290,7 @@ def cost_diagnostics_by_dimension(trials: pd.DataFrame, *, dimension: str) -> pd
         return pd.DataFrame(columns=["dimension", "slice_value", "model_key", "n_trials"])
 
     grouped = trials.dropna(subset=[dimension]).groupby([dimension, "model_key"], sort=True, dropna=False, observed=False)
-    summary = grouped.agg(n_trials=("score_value", "count")).reset_index()
+    summary = grouped.agg(n_trials=(score_column, "count")).reset_index()
     summary = summary.rename(columns={dimension: "slice_value"})
     summary.insert(0, "dimension", dimension)
     summary["slice_value"] = summary["slice_value"].astype(str)
@@ -257,14 +302,20 @@ def cost_diagnostics_by_dimension(trials: pd.DataFrame, *, dimension: str) -> pd
     return summary
 
 
-def swing_tasks_by_dimension(trials: pd.DataFrame, *, dimension: str, limit: int = 30) -> pd.DataFrame:
+def swing_tasks_by_dimension(
+    trials: pd.DataFrame,
+    *,
+    dimension: str,
+    limit: int = 30,
+    score_column: str = "score_value",
+) -> pd.DataFrame:
     if dimension not in trials.columns:
         raise ValueError(f"dimension {dimension!r} is not present in trials")
     rows: list[pd.DataFrame] = []
     for slice_value, slice_trials in trials.dropna(subset=[dimension]).groupby(
         dimension, sort=True, dropna=False, observed=False
     ):
-        matrix = score_matrix(aggregate_task_model_scores(slice_trials))
+        matrix = score_matrix(aggregate_task_model_scores(slice_trials, score_column=score_column))
         if matrix.empty:
             continue
         spread = matrix.max(axis=1, skipna=True) - matrix.min(axis=1, skipna=True)
@@ -295,11 +346,12 @@ def task_influence_table(
     *,
     contender_models: Iterable[str],
     limit: int = 30,
+    score_column: str = "score_value",
 ) -> pd.DataFrame:
     contenders = list(dict.fromkeys(str(model) for model in contender_models))
     if not contenders:
         return pd.DataFrame()
-    matrix = score_matrix(aggregate_task_model_scores(trials))
+    matrix = score_matrix(aggregate_task_model_scores(trials, score_column=score_column))
     if matrix.empty:
         return pd.DataFrame()
     available_contenders = [model for model in contenders if model in matrix.columns]

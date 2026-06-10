@@ -24,7 +24,6 @@ from deepswe_rank_stability.analysis.resampling import (
 )
 from deepswe_rank_stability.dashboard.state import (
     DashboardSelection,
-    coerce_source_for_mode,
     contender_model_order,
     eligible_variance_dimensions,
     friendly_empty_message,
@@ -33,41 +32,38 @@ from deepswe_rank_stability.dashboard.state import (
     rank_axis_range,
     rank_model_order,
     slice_values_with_summaries,
-    source_options,
     submit_selection,
     top_model_summary,
     variance_empty_message,
 )
-from deepswe_rank_stability.data.deepswe import load_dataset
+from deepswe_rank_stability.data.evals import EvalDataset, list_eval_ids, load_eval
 
 pn.extension("tabulator", "perspective", "plotly", sizing_mode="stretch_width")
 
-DATASET = load_dataset()
-TRIALS = DATASET.trials
+EVAL_DATASETS = {eval_id: load_eval(eval_id) for eval_id in list_eval_ids()}
+DEFAULT_EVAL_ID = "deep_swe"
 
-ALL_SOURCES = sorted(TRIALS["source"].dropna().unique())
-SCOPE_OPTIONS = ["All", *sorted(TRIALS["eval_scope"].dropna().unique())]
-OUTCOME_OPTIONS = ["All", *sorted(TRIALS["outcome"].dropna().unique())]
-LANGUAGE_OPTIONS = ["All", *sorted(TRIALS.get("language", pd.Series(dtype=str)).dropna().unique())]
-REPOSITORY_OPTIONS = ["All", *sorted(TRIALS.get("repository", pd.Series(dtype=str)).dropna().unique())]
-MODEL_OPTIONS = sorted(TRIALS["model_key"].dropna().unique())
-
-include_cross_benchmark = pn.widgets.Checkbox(name="Include cross-benchmark sources", value=False)
+eval_choice = pn.widgets.Select(
+    name="Eval",
+    options={dataset.label: eval_id for eval_id, dataset in EVAL_DATASETS.items()},
+    value=DEFAULT_EVAL_ID,
+)
+metric = pn.widgets.Select(name="Ranking metric", options={}, value=None)
 source = pn.widgets.Select(
     name="Source",
-    options=source_options(ALL_SOURCES, include_cross_benchmark=False),
-    value="deep-swe",
+    options=[],
+    value=None,
 )
-eval_scope = pn.widgets.Select(name="Eval scope", options=SCOPE_OPTIONS, value="full")
+eval_scope = pn.widgets.Select(name="Eval scope", options=[], value=None)
 included = pn.widgets.Select(
     name="Included in score",
     options={"Included only": True, "All": None, "Excluded only": False},
     value=True,
 )
-outcome = pn.widgets.Select(name="Outcome", options=OUTCOME_OPTIONS, value="All")
-language = pn.widgets.Select(name="Language", options=LANGUAGE_OPTIONS, value="All")
-repository = pn.widgets.Select(name="Repository", options=REPOSITORY_OPTIONS, value="All")
-models = pn.widgets.MultiChoice(name="Model + effort", options=MODEL_OPTIONS, value=[])
+outcome = pn.widgets.Select(name="Outcome", options=[], value=None)
+language = pn.widgets.Select(name="Language", options=[], value=None)
+repository = pn.widgets.Select(name="Repository", options=[], value=None)
+models = pn.widgets.MultiChoice(name="Model + effort", options=[], value=[])
 DEFAULT_DRAWS = int(os.environ.get("DEEPSWE_DEFAULT_DRAWS", "2_000"))
 
 draws = pn.widgets.IntInput(name="Bootstrap draws", value=DEFAULT_DRAWS, start=100, end=20_000, step=100)
@@ -89,18 +85,47 @@ _submitted_selection: DashboardSelection | None = None
 _last_clicks = -1
 
 
-def _sync_source_options(event: object | None = None) -> None:
+def _current_eval() -> EvalDataset:
+    return EVAL_DATASETS[eval_choice.value]
+
+
+def _options_for(frame: pd.DataFrame, column: str) -> list[str]:
+    if column not in frame.columns or frame[column].dropna().empty:
+        return ["All"]
+    return ["All", *sorted(frame[column].dropna().astype(str).unique())]
+
+
+def _coerce_widget_value(widget: pn.widgets.Select, value: object) -> None:
+    values = list(widget.options.values()) if isinstance(widget.options, dict) else list(widget.options)
+    widget.value = value if value in values else values[0]
+
+
+def _sync_eval_options(event: object | None = None) -> None:
     del event
-    options = source_options(ALL_SOURCES, include_cross_benchmark=include_cross_benchmark.value)
-    source.options = options
-    source.value = coerce_source_for_mode(
-        source.value,
-        ALL_SOURCES,
-        include_cross_benchmark=include_cross_benchmark.value,
-    )
+    dataset = _current_eval()
+    trials = dataset.trials
+    defaults = dataset.default_filters
+
+    metric.options = {metric_spec.label: metric_spec.name for metric_spec in dataset.metrics}
+    _coerce_widget_value(metric, dataset.default_metric)
+
+    source.options = _options_for(trials, "source")
+    _coerce_widget_value(source, defaults.get("source", "All"))
+    eval_scope.options = _options_for(trials, "eval_scope")
+    _coerce_widget_value(eval_scope, defaults.get("eval_scope", "All"))
+    outcome.options = _options_for(trials, "outcome")
+    _coerce_widget_value(outcome, defaults.get("outcome", "All"))
+    language.options = _options_for(trials, "language")
+    _coerce_widget_value(language, defaults.get("language", "All"))
+    repository.options = _options_for(trials, "repository")
+    _coerce_widget_value(repository, defaults.get("repository", "All"))
+    models.options = sorted(trials["model_key"].dropna().astype(str).unique())
+    models.value = [value for value in models.value if value in models.options]
+    included.value = defaults.get("included_in_score", True)
 
 
-include_cross_benchmark.param.watch(_sync_source_options, "value")
+eval_choice.param.watch(_sync_eval_options, "value")
+_sync_eval_options()
 
 
 def _none_if_all(value: str) -> str | None:
@@ -109,6 +134,8 @@ def _none_if_all(value: str) -> str | None:
 
 def _pending_selection() -> DashboardSelection:
     return DashboardSelection(
+        eval_id=eval_choice.value,
+        metric=metric.value,
         source=source.value,
         eval_scope=eval_scope.value,
         included_in_score=included.value,
@@ -118,7 +145,6 @@ def _pending_selection() -> DashboardSelection:
         model_keys=tuple(models.value or ()),
         draws=int(draws.value),
         seed=int(seed.value),
-        include_cross_benchmark=bool(include_cross_benchmark.value),
     )
 
 
@@ -134,8 +160,10 @@ def _selection_for_clicks(clicks: int) -> DashboardSelection:
 
 
 def _filtered_trials(selection: DashboardSelection) -> pd.DataFrame:
+    trials = EVAL_DATASETS[selection.eval_id].trials
     return filter_trials(
-        TRIALS,
+        trials,
+        eval_id=selection.eval_id,
         source=_none_if_all(selection.source),
         eval_scope=_none_if_all(selection.eval_scope),
         included_in_score=selection.included_in_score,
@@ -147,7 +175,10 @@ def _filtered_trials(selection: DashboardSelection) -> pd.DataFrame:
 
 
 def _metric_strip(filtered: pd.DataFrame, selection: DashboardSelection) -> pn.pane.HTML:
+    dataset = EVAL_DATASETS[selection.eval_id]
     chips = [
+        ("Eval", dataset.label),
+        ("Metric", dataset.metric(selection.metric).label),
         ("Trials", f"{len(filtered):,}"),
         ("Tasks", f"{filtered['task_name'].nunique():,}"),
         ("Models", f"{filtered['model_key'].nunique():,}"),
@@ -406,22 +437,29 @@ def _top_probability_figure(leaderboard: pd.DataFrame) -> go.Figure:
     return fig
 
 
-def _task_influence_table(filtered: pd.DataFrame, leaderboard: pd.DataFrame, limit: int = 30) -> pd.DataFrame:
+def _task_influence_table(
+    filtered: pd.DataFrame,
+    leaderboard: pd.DataFrame,
+    *,
+    score_column: str,
+    limit: int = 30,
+) -> pd.DataFrame:
     return task_influence_table(
         filtered,
         contender_models=contender_model_order(leaderboard),
         limit=limit,
+        score_column=score_column,
     )
 
 
-def _task_swing_table(filtered: pd.DataFrame, limit: int = 30) -> pd.DataFrame:
-    matrix = score_matrix(aggregate_task_model_scores(filtered))
+def _task_swing_table(filtered: pd.DataFrame, *, score_column: str, limit: int = 30) -> pd.DataFrame:
+    matrix = score_matrix(aggregate_task_model_scores(filtered, score_column=score_column))
     if matrix.empty:
         return pd.DataFrame()
     spread = matrix.max(axis=1, skipna=True) - matrix.min(axis=1, skipna=True)
     coverage = matrix.notna().sum(axis=1)
     task_metadata = (
-        filtered[["task_name", "language", "repository", "problem_title"]]
+        filtered[[column for column in ["task_name", "language", "repository", "problem_title"] if column in filtered.columns]]
         .drop_duplicates("task_name")
         .set_index("task_name")
     )
@@ -435,12 +473,12 @@ def _task_swing_table(filtered: pd.DataFrame, limit: int = 30) -> pd.DataFrame:
     return table.sort_values(["score_spread", "models_with_result"], ascending=[False, False]).head(limit)
 
 
-def _language_breakdown(filtered: pd.DataFrame) -> go.Figure | None:
+def _language_breakdown(filtered: pd.DataFrame, *, score_column: str) -> go.Figure | None:
     if "language" not in filtered.columns or filtered["language"].dropna().empty:
         return None
     summary = (
         filtered.groupby(["language", "model_key"], dropna=False, observed=False)
-        .agg(score=("score_value", "mean"), trials=("trial_name", "count"))
+        .agg(score=(score_column, "mean"), trials=("trial_name", "count"))
         .reset_index()
     )
     fig = px.scatter(
@@ -636,8 +674,9 @@ def _repository_underpowered_note(filtered: pd.DataFrame) -> pn.pane.Alert | Non
     )
 
 
-def _variance_controls(filtered: pd.DataFrame) -> pn.Row | pn.pane.Alert:
-    options = eligible_variance_dimensions(filtered, min_tasks=10, min_models=2)
+def _variance_controls(filtered: pd.DataFrame, dataset: EvalDataset) -> pn.Row | pn.pane.Alert:
+    candidates = tuple(dimension.column for dimension in dataset.dimensions if dimension.bootstrap)
+    options = eligible_variance_dimensions(filtered, candidates=candidates, min_tasks=10, min_models=2)
     empty_message = variance_empty_message(options)
     if empty_message is not None:
         return pn.pane.Alert(empty_message, alert_type="warning")
@@ -648,7 +687,9 @@ def _variance_controls(filtered: pd.DataFrame) -> pn.Row | pn.pane.Alert:
 
 
 def _variance_view(filtered: pd.DataFrame, selection: DashboardSelection, leaderboard: pd.DataFrame) -> pn.Column:
-    controls = _variance_controls(filtered)
+    dataset = EVAL_DATASETS[selection.eval_id]
+    score_column = dataset.metric(selection.metric).column
+    controls = _variance_controls(filtered, dataset)
     repository_note = _repository_underpowered_note(filtered)
     if isinstance(controls, pn.pane.Alert):
         sections: list[pn.viewable.Viewable] = [controls]
@@ -666,13 +707,14 @@ def _variance_view(filtered: pd.DataFrame, selection: DashboardSelection, leader
             seed=selection.seed,
             min_tasks=10,
             min_models=2,
+            score_column=score_column,
         )
     except ValueError as exc:
         return pn.Column(pn.pane.Alert(str(exc), alert_type="danger"))
 
     summary = sliced.summaries.copy()
     skipped = sliced.skipped_slices.copy()
-    coverage = model_task_coverage_by_dimension(filtered, dimension=dimension)
+    coverage = model_task_coverage_by_dimension(filtered, dimension=dimension, score_column=score_column)
 
     sections: list[pn.viewable.Viewable] = [
         controls,
@@ -768,12 +810,17 @@ def _trial_explorer(filtered: pd.DataFrame) -> pn.viewable.Viewable:
         column
         for column in [
             "trial_name",
+            "trial_id",
             "task_name",
+            "task_id",
             "model_key",
+            "system_id",
+            "eval_id",
             "source",
             "eval_scope",
             "included_in_score",
             "outcome",
+            "score",
             "score_value",
             "language",
             "repository",
@@ -800,6 +847,8 @@ def _trial_explorer(filtered: pd.DataFrame) -> pn.viewable.Viewable:
 
 def _analysis_view(clicks: int) -> pn.Column:
     selection = _selection_for_clicks(clicks)
+    dataset = EVAL_DATASETS[selection.eval_id]
+    score_column = dataset.metric(selection.metric).column
     filtered = _filtered_trials(selection)
     empty_message = friendly_empty_message(filtered)
     metrics = _metric_strip(filtered, selection)
@@ -807,7 +856,12 @@ def _analysis_view(clicks: int) -> pn.Column:
         return pn.Column(metrics, pn.pane.Alert(empty_message, alert_type="warning"))
 
     try:
-        result = bootstrap_rank_stability(filtered, draws=selection.draws, seed=selection.seed)
+        result = bootstrap_rank_stability(
+            filtered,
+            draws=selection.draws,
+            seed=selection.seed,
+            score_column=score_column,
+        )
     except ValueError as exc:
         return pn.Column(metrics, pn.pane.Alert(str(exc), alert_type="danger"))
 
@@ -815,9 +869,9 @@ def _analysis_view(clicks: int) -> pn.Column:
     rank_distribution = result.rank_distribution.copy()
     anchor = _run_anchor_strip(leaderboard, selection)
     pairwise_fig, strengths = _pairwise_figure(result.pairwise_win_probability.copy(), leaderboard)
-    task_influence = _task_influence_table(filtered, leaderboard)
-    swing_tasks = _task_swing_table(filtered)
-    language_figure = _language_breakdown(filtered)
+    task_influence = _task_influence_table(filtered, leaderboard, score_column=score_column)
+    swing_tasks = _task_swing_table(filtered, score_column=score_column)
+    language_figure = _language_breakdown(filtered, score_column=score_column)
 
     overview = pn.Column(
         metrics,
@@ -826,7 +880,7 @@ def _analysis_view(clicks: int) -> pn.Column:
             """
 ### How to read this dashboard
 
-Defaults use score-relevant full DeepSWE rows. SWE-Bench Pro only appears when cross-benchmark sources are enabled.
+Defaults use each eval adapter's score-relevant rows. Switch evals to compare DeepSWE and SWE-Bench Pro through the same analysis methods.
 Rank `1` is best. Pairwise values near `50%` are too close to call.
 """
         ),
@@ -878,8 +932,10 @@ Rank `1` is best. Pairwise values near `50%` are too close to call.
 
 
 controls = pn.WidgetBox(
+    "### Eval",
+    eval_choice,
+    metric,
     "### Filters",
-    include_cross_benchmark,
     source,
     eval_scope,
     included,
@@ -892,7 +948,7 @@ controls = pn.WidgetBox(
     seed,
     run,
     pn.pane.Markdown(
-        "Filters are pending until **Recompute** is clicked. Enable cross-benchmark sources only when you want SWE-Bench Pro rows."
+        "Filters are pending until **Recompute** is clicked. Eval adapters declare available metrics and dimensions."
     ),
     width=350,
 )

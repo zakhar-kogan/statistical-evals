@@ -62,6 +62,8 @@ class DashboardSelection:
     draws: int
     seed: int
     include_cross_benchmark: bool = False
+    eval_id: str = "deep_swe"
+    metric: str = "score"
 
     def label(self) -> str:
         included = (
@@ -72,6 +74,8 @@ class DashboardSelection:
             else "excluded"
         )
         pieces = [
+            f"eval={self.eval_id}",
+            f"metric={self.metric}",
             f"source={self.source}",
             f"eval_scope={self.eval_scope}",
             f"inclusion={included}",
