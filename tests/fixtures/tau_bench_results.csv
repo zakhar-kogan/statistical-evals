@@ -1,0 +1,6 @@
+simulation_id,task_id,domain,agent_llm,info_agent_implementation,reward,reward_basis,trial
+a1,1,airline,model-a,llm_agent,1,DB+COMMUNICATE,0
+a2,1,airline,model-a,llm_agent,0,DB+COMMUNICATE,1
+b1,1,airline,model-b,llm_agent,1,DB+COMMUNICATE,0
+a3,2,airline,model-a,llm_agent,0,DB+COMMUNICATE,0
+b2,2,airline,model-b,llm_agent,1,DB+COMMUNICATE,0

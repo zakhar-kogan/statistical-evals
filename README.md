@@ -35,6 +35,15 @@ uv run python -m deepswe_rank_stability.cli bootstrap --eval swebench_pro --draw
 
 Artifacts are cached under `.cache/deepswe_rank_stability/` by default.
 
+τ-Bench / τ² current exports can be analyzed by pointing `TAU_BENCH_RESULTS` at a
+monolithic `results.json`, a directory-format result folder with `simulations/`,
+or a flat JSON/JSONL/CSV export:
+
+```bash
+TAU_BENCH_RESULTS=/path/to/results.json uv run python -m deepswe_rank_stability.cli summarize --eval tau_bench
+TAU_BENCH_RESULTS=/path/to/results.json uv run python -m deepswe_rank_stability.cli bootstrap --eval tau_bench --draws 500
+```
+
 The reusable analysis functions operate on normalized result tables with `eval_id`, `trial_id`, `task_id`, `system_id`, and an explicit ranking metric column. DeepSWE aliases such as `trial_name`, `task_name`, `model_key`, and `score_value` are still preserved during the migration.
 
 ## Dashboards

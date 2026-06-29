@@ -9,6 +9,7 @@ from typing import Any, Callable
 import pandas as pd
 
 from deepswe_rank_stability.data.deepswe import DEFAULT_CACHE_DIR, load_dataset
+from deepswe_rank_stability.data.tau_bench import load_dataset as load_tau_bench_dataset
 
 
 @dataclass(frozen=True)
@@ -174,9 +175,61 @@ def load_swebench_pro_eval() -> EvalDataset:
     )
 
 
+def load_tau_bench_eval() -> EvalDataset:
+    raw = load_tau_bench_dataset(cache_dir=DEFAULT_CACHE_DIR)
+    metrics = tuple(
+        MetricSpec(name=name, label=label, column=name)
+        for name, label in [
+            ("reward", "Reward"),
+            ("score", "Score"),
+            ("db_reward", "DB reward"),
+            ("communicate_reward", "Communicate reward"),
+            ("env_assertion_reward", "Environment assertion reward"),
+            ("action_reward", "Action reward"),
+            ("partial_action_reward", "Partial action reward"),
+            ("pass_at_k", "Pass@k"),
+        ]
+        if name in raw.trials.columns
+    )
+    dimensions = tuple(
+        DimensionSpec(name=name, label=label, column=name, bootstrap=bootstrap)
+        for name, label, bootstrap in [
+            ("domain", "Domain", True),
+            ("agent_llm", "Agent LLM", True),
+            ("user_llm", "User LLM", False),
+            ("agent_strategy", "Agent strategy", True),
+            ("user_strategy", "User strategy", False),
+            ("trial_index", "Trial index", False),
+            ("task_split", "Task split", True),
+            ("reward_basis", "Reward basis", True),
+            ("action_required", "Action required", False),
+            ("communication_mode", "Communication mode", True),
+            ("termination_reason", "Termination reason", False),
+        ]
+        if name in raw.trials.columns
+    )
+    return EvalDataset(
+        eval_id="tau_bench",
+        label="τ-Bench / τ² Current",
+        trials=raw.trials,
+        tasks=raw.tasks,
+        metrics=metrics or (MetricSpec(name="reward", label="Reward", column="reward"),),
+        dimensions=dimensions,
+        default_filters={
+            "source": "tau2-bench",
+            "eval_scope": "tau3-current",
+            "included_in_score": True,
+            "outcome": "All",
+            "domain": "All",
+        },
+        default_metric="reward",
+    )
+
+
 BUILTIN_EVALS: dict[str, EvalLoader] = {
     "deep_swe": load_deep_swe_eval,
     "swebench_pro": load_swebench_pro_eval,
+    "tau_bench": load_tau_bench_eval,
 }
 
 
