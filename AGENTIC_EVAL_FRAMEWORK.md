@@ -3,16 +3,66 @@
 An eval can only answer questions supported by the units, factors, and
 measurement process it logs.
 
-The workflow is:
+Use the framework in two directions:
+
+- **Design-time:** start with the questions or claims you want to support, then
+  decide what must be logged before the eval runs.
+- **Analysis-time:** start with the data already available, then decide what can
+  be answered and what must be marked unavailable.
+
+Questions are always in scope. Defensible answers depend on what was logged.
+
+## 1. Decision Flow
+
+```mermaid
+flowchart TD
+  A["Start"] --> B{"Designing an eval or auditing results?"}
+
+  B -->|Designing| C["Choose target questions or claims"]
+  C --> D["Map claims to required units, factors, and scoring provenance"]
+  D --> E["Add logging fields before running the eval"]
+  E --> F["Run eval"]
+  F --> G["Report only claims supported by logged data"]
+
+  B -->|Auditing| H["Inventory available data"]
+  H --> I["Identify row level: aggregate, task, run, trajectory, or event"]
+  I --> J["Identify varying factors: model, prompt, harness, env, judge"]
+  J --> K["Choose answerable questions and matching methods"]
+  K --> L["Mark missing-unit claims unavailable"]
+  L --> G
+```
+
+Question-to-logging checklist:
+
+This checklist summarizes Section 3. If it ever differs from the question
+contract tables, treat Section 3 as authoritative.
+
+| If you want to ask... | You need at least... |
+| --- | --- |
+| Who is better, or is `X > Y`? | shared task-level outcomes for X and Y |
+| Are ranks or top-K stable? | task-level system matrix |
+| How reliable is X across runs? | `run_id`, trial, seed, or repeated-attempt data |
+| Does model vs harness matter? | crossed `model_id x harness_id x task_id` data |
+| Are judges or rewards reliable? | scoring provenance, judge/verifier/reward IDs, repeated or expert labels |
+| Can X fail, and when? | failure labels, severity, domain/task metadata, parsed traces/events where possible |
+| What uncertainty is reduced per run or dollar? | task/run counts plus cost, latency, and tokens |
+
+Worked example:
+
+> X solves 62/100 tasks and Y solves 59/100. The paired gap is +3 percentage
+> points, but the 95% task-bootstrap interval is [-2, +8] pp. Report: X is
+> descriptively ahead, but this eval does not resolve X > Y. If 2 pp resolution
+> is required, use pilot or historical variance to plan MDE, power, or required
+> task count for the next eval.
+
+Operational rule:
 
 1. Define the logged units and factors.
 2. Decide which questions are identifiable from those data.
 3. Choose methods that match the data shape.
 4. Mark unavailable questions explicitly.
 
-Questions are always part of the framework. Answers depend on logged dimensions.
-
-## 1. Taxonomy And Data Contract
+## 2. Taxonomy And Data Contract
 
 System factors:
 
@@ -67,7 +117,7 @@ judge/verifier/reward provenance fields become part of the required contract.
 If `scoring_method` is unknown, the outcome table fails the minimum data
 contract.
 
-## 2. Question Contract
+## 3. Question Contract
 
 ### Object And Data Contract
 
@@ -145,10 +195,12 @@ confusion matrices against expert labels, and variance components when repeated
 labels identify judge effects.
 Factor attribution requires crossed variation and identifies logged factors,
 not internal mechanisms such as retry policy or tool wrapper choices unless
-those mechanisms are separately ablated. Consecutive benchmark snapshots are
-not iid draws.
+those mechanisms are separately ablated. Check interactions before interpreting
+model, harness, prompt, or environment main effects alone; when interactions are
+large, main effects are averaging summaries over the observed factor mix, not
+context-free factor claims. Consecutive benchmark snapshots are not iid draws.
 
-## 3. Interpretation Rules
+## 4. Interpretation Rules
 
 These rules summarize recurring notebook caveats, the simulator/checker routing
 logic, and standard statistical guardrails.
@@ -185,7 +237,7 @@ Selection caveats:
 - Post-hoc "best system" claims should consider shrinkage, partial pooling, or
   regularized ranking, plus rank-stability reporting.
 
-## 4. Current Artifact Fit
+## 5. Current Artifact Fit
 
 - **SWE-bench Verified:** `task x submission`, single-run public outcomes.
   Supports observed scores, paired task comparisons, rank stability, repo
@@ -219,7 +271,7 @@ HELM is used as multi-scenario, multi-metric reporting backing: when meaningful
 scenario or metric dimensions exist, do not collapse the report to one aggregate
 score alone.
 
-## 5. Reporting Package
+## 6. Reporting Package
 
 This package combines the notebook reporting pattern with BetterBench-style
 benchmark QA and HELM-style scenario/metric coverage.
