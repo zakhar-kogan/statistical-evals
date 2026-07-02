@@ -1,0 +1,2055 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Agentic Eval Methods Matrix</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --controls-offset: 0px;
+      --ink: oklch(23% 0.018 92);
+      --muted: oklch(47% 0.014 92);
+      --quiet: oklch(62% 0.012 92);
+      --paper: oklch(96.5% 0.011 91);
+      --panel: oklch(99% 0.006 91);
+      --panel-2: oklch(93.5% 0.012 91);
+      --line: oklch(84% 0.015 91);
+      --line-strong: oklch(68% 0.02 91);
+      --accent: oklch(54% 0.13 43);
+      --accent-soft: oklch(88% 0.052 55);
+      --accent-wash: oklch(96% 0.014 55);
+      --diagram-line: oklch(77% 0.015 91);
+      --diagram-fill: oklch(97.5% 0.007 91);
+      --diagram-fill-strong: oklch(95.5% 0.01 91);
+      --blue: oklch(50% 0.095 236);
+      --blue-soft: oklch(89% 0.035 236);
+      --green: oklch(55% 0.11 148);
+      --green-soft: oklch(90% 0.045 148);
+      --red: oklch(54% 0.12 24);
+      --red-soft: oklch(91% 0.04 24);
+      --shadow: 0 18px 45px oklch(35% 0.018 92 / 0.13);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background:
+        linear-gradient(90deg, oklch(90% 0.012 91 / 0.45) 1px, transparent 1px),
+        linear-gradient(180deg, oklch(90% 0.012 91 / 0.45) 1px, transparent 1px),
+        var(--paper);
+      background-size: 44px 44px;
+      color: var(--ink);
+      font-family: var(--sans);
+      font-size: 15px;
+      line-height: 1.45;
+    }
+
+    a { color: inherit; }
+
+    button, input, select {
+      font: inherit;
+    }
+
+    .pill, .chip {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--muted);
+      padding: 5px 9px;
+      font-size: 12px;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .shell {
+      width: min(1480px, calc(100vw - 28px));
+      margin: 0 auto;
+      padding: 18px 0 56px;
+    }
+
+    .ladder-section {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+    }
+
+    .framework {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      margin-bottom: 20px;
+    }
+
+    .taxonomy-visual {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      background: var(--panel);
+    }
+
+    .taxonomy-formulas, .system-factors, .unlock-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .formula-chip, .system-chip, .unlock-item {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--ink);
+      padding: 5px 7px;
+      font-size: 12px;
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    .formula-chip, .unlock-item code {
+      font-family: var(--mono);
+    }
+
+    .system-chip {
+      border-color: var(--diagram-line);
+      background: var(--diagram-fill);
+    }
+
+    .system-chip b {
+      color: var(--ink);
+    }
+
+    .nested-map {
+      min-width: 0;
+    }
+
+    .level-box {
+      min-width: 0;
+      border: 1px solid var(--diagram-line);
+      background: var(--diagram-fill);
+      padding: 12px;
+    }
+
+    .level-benchmark {
+      background: oklch(98% 0.006 91);
+    }
+
+    .level-domain {
+      margin-top: 10px;
+      background: var(--diagram-fill-strong);
+    }
+
+    .level-task {
+      background: var(--panel);
+      border-color: oklch(63% 0.018 91);
+    }
+
+    .level-content {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .level-content strong, .run-card strong {
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .level-content span, .run-card small {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .level-label {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: max-content;
+      min-width: 24px;
+      min-height: 22px;
+      margin-bottom: 6px;
+      border-radius: 999px;
+      background: oklch(27% 0.02 92);
+      color: oklch(99% 0.004 91);
+      padding: 2px 7px;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .task-run-layout {
+      display: grid;
+      grid-template-columns: minmax(170px, 0.36fr) minmax(0, 1fr);
+      gap: 10px;
+      margin-top: 10px;
+      align-items: stretch;
+    }
+
+    .task-runs {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      min-width: 0;
+    }
+
+    .task-runs::before {
+      content: "S factors bind at run level";
+      position: absolute;
+      inset-block-start: -32px;
+      inset-inline-end: 0;
+      border: 1px solid var(--diagram-line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--muted);
+      padding: 3px 7px;
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .run-card {
+      min-width: 0;
+      display: grid;
+      align-content: start;
+      gap: 5px;
+      border: 1px solid var(--diagram-line);
+      background: var(--panel);
+      padding: 10px;
+    }
+
+    .run-card.primary {
+      border-color: oklch(67% 0.07 55);
+      background: var(--accent-wash);
+    }
+
+    .trajectory-lane {
+      display: grid;
+      gap: 6px;
+      margin-top: 3px;
+      border: 1px solid oklch(72% 0.045 55);
+      background: oklch(98% 0.01 55);
+      padding: 8px;
+    }
+
+    .trajectory-lane .level-label {
+      margin-bottom: 0;
+      background: oklch(42% 0.12 43);
+      color: oklch(99% 0.004 91);
+    }
+
+    .level-content .level-label, .run-card .level-label {
+      color: oklch(99% 0.004 91);
+    }
+
+    .event-dots {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .event-dot {
+      display: inline-flex;
+      align-items: center;
+      min-height: 22px;
+      border: 1px solid oklch(72% 0.04 55);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--muted);
+      padding: 3px 7px;
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .terminal-example {
+      display: grid;
+      grid-template-columns: 180px repeat(5, minmax(0, 1fr));
+      gap: 1px;
+      border: 1px solid var(--line);
+      background: var(--line);
+      overflow: hidden;
+    }
+
+    .terminal-example > * {
+      min-width: 0;
+      background: var(--panel);
+      padding: 9px 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .terminal-example strong {
+      color: var(--ink);
+      font-size: 13px;
+    }
+
+    .terminal-example b {
+      color: var(--ink);
+      font-family: var(--mono);
+    }
+
+    .terminal-example em {
+      grid-column: 1 / -1;
+      font-style: normal;
+      background: oklch(96% 0.012 91);
+    }
+
+    .unlock-strip {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .unlock-item {
+      display: grid;
+      gap: 3px;
+      border-radius: 0;
+      background: oklch(97% 0.011 91);
+      white-space: normal;
+    }
+
+    .unlock-item code {
+      color: var(--ink);
+      font-size: 12px;
+    }
+
+    .unlock-item span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .guardrail-list, .method-list, .gaps-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 6px;
+    }
+
+    .guardrail-list li, .method-list li, .gaps-list li {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .guardrail-list li::before, .gaps-list li::before {
+      content: "";
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      margin: 0 7px 1px 0;
+      border-radius: 999px;
+      background: var(--accent);
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+      background: oklch(94.5% 0.012 91);
+    }
+
+    .section-heading h2 {
+      margin: 0 0 5px;
+      font-size: 20px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .section-heading p {
+      max-width: 74ch;
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .simulator {
+      display: grid;
+    }
+
+    .dimension-console {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(240px, 0.35fr);
+      gap: 1px;
+      background: var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .dimension-console > div {
+      background: var(--panel);
+      padding: 15px;
+    }
+
+    .dimension-group {
+      display: grid;
+      gap: 10px;
+    }
+
+    .dimension-group h3 {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .dimension-group p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .dimension-toggles, .preset-buttons, .tokens {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .dimension-toggle, .preset-button, .token, .method-pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: oklch(96.5% 0.012 91);
+      color: var(--ink);
+      padding: 5px 9px;
+      font-size: 12px;
+      line-height: 1.25;
+      white-space: nowrap;
+    }
+
+    .dimension-toggle, .preset-button {
+      cursor: pointer;
+    }
+
+    .dimension-toggle {
+      font-family: var(--mono);
+    }
+
+    .dimension-toggle[aria-pressed="true"] {
+      border-color: oklch(43% 0.1 148);
+      background: var(--green-soft);
+      color: oklch(33% 0.1 148);
+      font-weight: 750;
+    }
+
+    .preset-button[aria-pressed="true"] {
+      border-color: var(--ink);
+      background: oklch(27% 0.02 92);
+      color: oklch(96% 0.006 91);
+    }
+
+    .dimension-toggle:focus-visible, .preset-button:focus-visible {
+      border-color: var(--accent);
+      outline: none;
+      box-shadow: 0 0 0 3px oklch(72% 0.08 43 / 0.27);
+    }
+
+    .simulator-summary {
+      display: grid;
+      align-content: start;
+      gap: 10px;
+    }
+
+    .summary-number {
+      font-size: 34px;
+      line-height: 1;
+      font-weight: 800;
+    }
+
+    .summary-label {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .capability-table {
+      display: grid;
+    }
+
+    #capabilityRows {
+      display: contents;
+    }
+
+    .capability-row {
+      display: grid;
+      grid-template-columns: 132px minmax(230px, 1fr) minmax(245px, 1.05fr) minmax(190px, 0.8fr) minmax(230px, 1fr);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .capability-row:last-child {
+      border-bottom: 0;
+    }
+
+    .capability-row > div {
+      padding: 13px 14px;
+      border-inline-end: 1px solid var(--line);
+    }
+
+    .capability-row > div:last-child {
+      border-inline-end: 0;
+    }
+
+    .capability-head {
+      background: oklch(96% 0.01 91);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .capability-row strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 13px;
+      line-height: 1.3;
+    }
+
+    .capability-row span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .method-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .method-pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      background: oklch(95% 0.012 91);
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .capability-status {
+      display: grid;
+      align-content: start;
+      gap: 6px;
+    }
+
+    .capability-badge {
+      width: max-content;
+      max-width: 100%;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+
+    .capability-row.supported .capability-badge { background: var(--green-soft); color: oklch(36% 0.1 148); }
+    .capability-row.partial .capability-badge { background: var(--accent-soft); color: oklch(42% 0.11 43); }
+    .capability-row.locked .capability-badge { background: var(--red-soft); color: oklch(40% 0.11 24); }
+
+    .missing-token {
+      border-color: oklch(78% 0.06 24);
+      background: var(--red-soft);
+      color: oklch(40% 0.11 24);
+    }
+
+    .helpful-token {
+      border-color: oklch(78% 0.06 43);
+      background: var(--accent-soft);
+      color: oklch(42% 0.11 43);
+    }
+
+    .gaps {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      margin: 20px 0;
+      padding: 16px;
+    }
+
+    .gaps h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .gaps-list {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 18px;
+    }
+
+    .matrix-intro {
+      margin: 22px 0 10px;
+    }
+
+    .matrix-intro h2 {
+      margin: 0 0 5px;
+      font-size: 20px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .matrix-intro p {
+      margin: 0;
+      max-width: 72ch;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .controls {
+      position: sticky;
+      top: 0;
+      z-index: 6;
+      display: grid;
+      grid-template-columns: 1fr repeat(3, minmax(170px, 220px));
+      gap: 10px;
+      align-items: end;
+      padding: 12px;
+      margin-bottom: 16px;
+      border: 1px solid var(--line);
+      background: oklch(97% 0.01 91 / 0.96);
+      box-shadow: 0 10px 28px oklch(45% 0.018 92 / 0.09);
+    }
+
+    .field {
+      display: grid;
+      gap: 5px;
+    }
+
+    .field label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    .field input, .field select {
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--ink);
+      padding: 8px 10px;
+      outline: none;
+    }
+
+    .field input:focus, .field select:focus, .bench-tab:focus-visible, .method-row:focus-visible {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px oklch(72% 0.08 43 / 0.27);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .matrix-wrap {
+      overflow: visible;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    table {
+      width: 100%;
+      table-layout: fixed;
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    th, td {
+      border-bottom: 1px solid var(--line);
+      border-inline-end: 1px solid var(--line);
+      padding: 10px;
+      vertical-align: top;
+    }
+
+    th {
+      position: relative;
+      z-index: 1;
+      background: oklch(94.5% 0.012 91);
+      color: var(--muted);
+      font-size: 12px;
+      text-align: left;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    #matrix thead th {
+      position: sticky;
+      top: var(--controls-offset);
+      z-index: 9;
+    }
+
+    td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 4;
+      width: 220px;
+      min-width: 220px;
+      max-width: 220px;
+      background: var(--panel);
+    }
+
+    th:first-child {
+      width: 220px;
+      background: oklch(94.5% 0.012 91);
+    }
+
+    tr:last-child td { border-bottom: 0; }
+    td:last-child, th:last-child { border-inline-end: 0; }
+
+    .method-row {
+      cursor: pointer;
+      outline: none;
+    }
+
+    .method-row:hover td {
+      background: oklch(97% 0.011 77);
+    }
+
+    .method-name {
+      display: grid;
+      gap: 7px;
+    }
+
+    .method-name strong {
+      font-size: 14px;
+      line-height: 1.25;
+    }
+
+    .method-name small {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .status {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .badge {
+      width: max-content;
+      max-width: 100%;
+      border-radius: 999px;
+      padding: 3px 7px;
+      font-size: 11px;
+      font-weight: 750;
+      line-height: 1.25;
+    }
+
+    .yes .badge { background: var(--green-soft); color: oklch(38% 0.09 148); }
+    .partial .badge { background: var(--accent-soft); color: oklch(42% 0.11 43); }
+    .no .badge { background: var(--red-soft); color: oklch(40% 0.11 24); }
+    .roadmap .badge { background: var(--blue-soft); color: oklch(38% 0.09 236); }
+
+    .status span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.32;
+    }
+
+    .side {
+      position: sticky;
+      top: 88px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+
+    .panel h2, .panel h3 {
+      margin: 0 0 10px;
+      font-size: 17px;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    .panel p {
+      margin: 0 0 10px;
+      color: var(--muted);
+    }
+
+    .panel ul {
+      margin: 8px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 7px;
+    }
+
+    .panel li {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .panel li b {
+      color: var(--ink);
+    }
+
+    .bench-tabs {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .bench-tab {
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--muted);
+      cursor: pointer;
+      padding: 7px 8px;
+      text-align: left;
+    }
+
+    .bench-tab[aria-selected="true"] {
+      border-color: var(--ink);
+      background: oklch(27% 0.02 92);
+      color: oklch(96% 0.006 91);
+    }
+
+    .bench-detail {
+      display: grid;
+      gap: 10px;
+    }
+
+    .bench-detail .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .decision {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 1px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: var(--line);
+      margin-top: 18px;
+    }
+
+    .decision div {
+      background: var(--panel);
+      padding: 14px;
+    }
+
+    .decision b {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+
+    .decision span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 1120px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .side {
+        position: static;
+      }
+
+      .controls {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .dimension-console {
+        grid-template-columns: 1fr;
+      }
+
+      .terminal-example, .gaps-list {
+        grid-template-columns: 1fr;
+      }
+
+      .task-run-layout {
+        grid-template-columns: 1fr;
+      }
+
+      .task-runs::before {
+        position: static;
+        grid-column: 1 / -1;
+        width: max-content;
+        max-width: 100%;
+      }
+
+      .capability-row {
+        grid-template-columns: 1fr;
+      }
+
+      .capability-row > div {
+        border-inline-end: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .capability-row > div:last-child {
+        border-bottom: 0;
+      }
+
+      .capability-head {
+        display: none;
+      }
+    }
+
+    @media (max-width: 720px) {
+      .shell {
+        width: min(100vw - 18px, 1480px);
+        padding-top: 10px;
+      }
+
+      .decision {
+        grid-template-columns: 1fr;
+      }
+
+      .section-heading {
+        align-items: start;
+        flex-direction: column;
+      }
+
+      .taxonomy-visual {
+        padding: 12px;
+      }
+
+      .task-runs, .unlock-strip {
+        grid-template-columns: 1fr;
+      }
+
+      .controls {
+        position: static;
+        grid-template-columns: 1fr;
+      }
+
+      thead {
+        position: static;
+      }
+
+      #matrix thead th {
+        position: static;
+      }
+
+      .matrix-wrap {
+        overflow: auto;
+      }
+
+      table {
+        min-width: 980px;
+        table-layout: auto;
+      }
+
+      td:first-child {
+        min-width: 210px;
+        max-width: 210px;
+      }
+
+      .status {
+        min-width: 140px;
+      }
+
+      .bench-tabs {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="framework" aria-labelledby="frameworkTitle">
+      <div class="section-heading">
+        <div>
+          <h2 id="frameworkTitle">Eval data levels</h2>
+          <p>An eval is not one flat table. It is a nested object, and each extra level unlocks different claims.</p>
+        </div>
+        <div class="taxonomy-formulas" aria-label="Compact framework labels">
+          <span class="formula-chip">S = M x H x E</span>
+          <span class="formula-chip">B -&gt; C -&gt; T -&gt; R -&gt; tau -&gt; e</span>
+        </div>
+      </div>
+      <div class="taxonomy-visual">
+        <div class="system-factors" aria-label="System factors applied to runs">
+          <span class="system-chip"><b>M</b> model</span>
+          <span class="system-chip"><b>H</b> harness / scaffold</span>
+          <span class="system-chip"><b>E</b> environment / tools / state</span>
+        </div>
+
+        <div class="nested-map" aria-label="Nested eval data structure">
+          <div class="level-box level-benchmark">
+            <span class="level-label">B</span>
+            <div class="level-content">
+              <strong>Benchmark / eval</strong>
+              <span>The full evaluation surface: tasks, scoring rules, metadata, and submitted systems.</span>
+              <div class="level-box level-domain">
+                <span class="level-label">C</span>
+                <div class="level-content">
+                  <strong>Domain or task group</strong>
+                  <span>A repo family, category, reward basis, environment domain, or other slice.</span>
+                  <div class="task-run-layout">
+                    <div class="level-box level-task">
+                      <span class="level-label">T</span>
+                      <div class="level-content">
+                        <strong>Task</strong>
+                        <span>One shared unit of work that systems can be compared on.</span>
+                      </div>
+                    </div>
+                    <div class="task-runs" aria-label="Repeated runs for the same task and system">
+                      <div class="run-card">
+                        <span class="level-label">R</span>
+                        <strong>run 1</strong>
+                        <small>outcome only</small>
+                      </div>
+                      <div class="run-card primary">
+                        <span class="level-label">R</span>
+                        <strong>run 2</strong>
+                        <div class="trajectory-lane">
+                          <span class="level-label">tau</span>
+                          <span>trajectory</span>
+                          <div class="event-dots" aria-label="Events inside a trajectory">
+                            <span class="event-dot">tool call</span>
+                            <span class="event-dot">message</span>
+                            <span class="event-dot">verifier</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="run-card">
+                        <span class="level-label">R</span>
+                        <strong>run 3</strong>
+                        <small>same task/system</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="terminal-example" aria-label="Terminal-Bench example shape">
+          <strong>Example shape: Terminal-Bench</strong>
+          <span><b>B</b> = Terminal-Bench 2.0</span>
+          <span><b>C</b> = task family/domain when metadata exists</span>
+          <span><b>T</b> = one terminal task</span>
+          <span><b>R</b> = repeated trials for the same task/system</span>
+          <span><b>tau/e</b> = only usable if traces or event logs are available and parsed</span>
+          <em>This example shows the possible nesting, not that every notebook has every level.</em>
+        </div>
+
+        <div class="unlock-strip" aria-label="What data dimensions unlock">
+          <div class="unlock-item">
+            <code>task x submission</code>
+            <span>leaderboard resolution</span>
+          </div>
+          <div class="unlock-item">
+            <code>task x submission x run</code>
+            <span>repeated-run reliability</span>
+          </div>
+          <div class="unlock-item">
+            <code>task x model x harness</code>
+            <span>factor attribution</span>
+          </div>
+          <div class="unlock-item">
+            <code>task x run x tau x event</code>
+            <span>trajectory audit</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="ladder-section" aria-labelledby="simulatorTitle">
+      <div class="section-heading">
+        <div>
+          <h2 id="simulatorTitle">Available dimensions simulator</h2>
+          <p>More data dimensions do not automatically mean better evals; they allow different claims.</p>
+        </div>
+      </div>
+      <div class="simulator">
+        <div class="dimension-console">
+          <div class="dimension-group">
+            <h3>Toggle available dimensions</h3>
+            <div class="dimension-toggles" id="dimensionToggles" aria-label="Available dimensions"></div>
+            <p>Now toggle which levels are actually present in a notebook.</p>
+          </div>
+          <div class="dimension-group">
+            <h3>Notebook presets</h3>
+            <div class="preset-buttons" id="presetButtons" aria-label="Benchmark presets"></div>
+            <p id="selectedDimensionsText"></p>
+          </div>
+        </div>
+        <div class="capability-table" role="table" aria-label="Questions and methods unlocked by selected dimensions">
+          <div class="capability-row capability-head" role="row">
+            <div role="columnheader">Status</div>
+            <div role="columnheader">Question unlocked</div>
+            <div role="columnheader">Methods</div>
+            <div role="columnheader">Needs / missing</div>
+            <div role="columnheader">Examples and caveat</div>
+          </div>
+          <div id="capabilityRows"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="gaps" aria-labelledby="gapsTitle">
+      <h2 id="gapsTitle">Methodology gaps to keep explicit</h2>
+      <ul class="gaps-list">
+        <li>Most leaderboards cannot support pure model or harness attribution without crossed designs.</li>
+        <li>Trace artifacts need a parsed event schema before trajectory claims.</li>
+        <li>Missingness conventions need standardized sensitivity reporting.</li>
+        <li>Small slices need powered thresholds or shrinkage before strong slice claims.</li>
+        <li>Non-separation is not equivalence; equivalence needs a margin and test.</li>
+        <li>Temporal drift needs repeated benchmark snapshots.</li>
+        <li>Judge or reward reliability and severity labels are inconsistent or absent.</li>
+      </ul>
+    </section>
+
+    <section class="matrix-intro" aria-labelledby="matrixTitle">
+      <h2 id="matrixTitle">Notebook coverage by method</h2>
+      <p>
+        Use this lower matrix as drill-down: it maps each method to the notebooks that include it,
+        partially support it, or cannot support it from the available data shape.
+      </p>
+    </section>
+
+    <section class="controls" aria-label="Filters">
+      <div class="field">
+        <label for="search">Search methods, claims, caveats</label>
+        <input id="search" type="search" placeholder="try: MDE, harness, repeated runs, trajectory">
+      </div>
+      <div class="field">
+        <label for="benchFilter">Benchmark</label>
+        <select id="benchFilter">
+          <option value="all">All benchmarks</option>
+          <option value="swe">SWE-bench Verified</option>
+          <option value="terminal">Terminal-Bench 2.0</option>
+          <option value="harness">Harness-Bench</option>
+          <option value="deepswe">DeepSWE</option>
+          <option value="mle">MLE-Bench</option>
+          <option value="tau">τ-bench</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="levelFilter">Data level</label>
+        <select id="levelFilter">
+          <option value="all">All levels</option>
+          <option value="task">task outcomes</option>
+          <option value="run">repeated runs</option>
+          <option value="integrity">data integrity</option>
+          <option value="metric">metrics and scoring</option>
+          <option value="factor">model x harness factors</option>
+          <option value="slice">domains and slices</option>
+          <option value="trajectory">trajectory artifacts</option>
+          <option value="ops">operational profile</option>
+          <option value="temporal">temporal drift</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="statusFilter">Availability</label>
+        <select id="statusFilter">
+          <option value="all">All statuses</option>
+          <option value="yes">Included</option>
+          <option value="partial">Partial or caveated</option>
+          <option value="no">Unsupported</option>
+          <option value="roadmap">Roadmap</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="layout">
+      <div class="matrix-wrap" aria-label="Interactive methods matrix">
+        <table id="matrix">
+          <thead>
+            <tr>
+              <th>Method / question</th>
+              <th>SWE</th>
+              <th>Terminal</th>
+              <th>Harness</th>
+              <th>DeepSWE</th>
+              <th>MLE</th>
+              <th>τ-bench</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+      <aside class="side">
+        <section class="panel" id="methodPanel" aria-live="polite">
+          <h2>Click a method</h2>
+          <p>
+            The matrix is organized by claim. A green cell means the notebooks run that analysis.
+            Amber means the analysis is descriptive or caveated. Red means the data shape does not support the claim.
+          </p>
+        </section>
+
+        <section class="panel">
+          <h3>Benchmark TLDR</h3>
+          <div class="bench-tabs" role="tablist" aria-label="Benchmark summaries"></div>
+          <div class="bench-detail" id="benchDetail"></div>
+        </section>
+      </aside>
+    </section>
+
+    <section class="decision" aria-label="Reporting recommendations">
+      <div>
+        <b>Report alongside rank</b>
+        <span>Uncertainty, adjacent-rank resolution, non-separated rank bands, rank-stability intervals, top-K probabilities, and MDE scale.</span>
+      </div>
+      <div>
+        <b>Name the compared object</b>
+        <span>Submission, config, model, model plus harness, or full agent system. Do not silently upgrade one into another.</span>
+      </div>
+      <div>
+        <b>Show data support</b>
+        <span>Task coverage, missing cells, repeated-run counts, slice sizes, and whether repeated rows are independent evidence.</span>
+      </div>
+      <div>
+        <b>Keep caveats attached</b>
+        <span>Non-significance is not equivalence. More runs on the same small task set may not solve task-composition uncertainty.</span>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const benches = [
+      {
+        id: "swe",
+        label: "SWE",
+        title: "SWE-bench Verified",
+        data: "500 tasks x public submissions, single-run task outcomes.",
+        takeaway: "Supports coarse quality separation, but close top-30 ranks are over-resolved. Adjacent ranks were not separated in the notebook, while farther pairs often were.",
+        caveat: "No repeated runs, no pure model claim, repo mixture is a sensitivity dimension rather than a clean sampling frame.",
+        tags: ["task x submission", "single run", "repo sensitivity"]
+      },
+      {
+        id: "terminal",
+        label: "Terminal",
+        title: "Terminal-Bench 2.0",
+        data: "task x submission x repeated trials in the public snapshot subset.",
+        takeaway: "Repeated trials are useful, but they are not extra independent tasks. Notebook TLDR: task composition explains about 90% of nested variance, repeated-run component about 10%.",
+        caveat: "Public subset and missing rewards need explicit conventions. Exact local ranks are weaker than coarse top-K membership.",
+        tags: ["repeated runs", "nested bootstrap", "variance budget"]
+      },
+      {
+        id: "harness",
+        label: "Harness",
+        title: "Harness-Bench",
+        data: "Balanced 106 tasks x 8 models x 6 harnesses, plus Codex reference rows.",
+        takeaway: "This is the clean case for showing that score is not only a model property. The crossed design supports model effects, harness effects, and model x harness interaction.",
+        caveat: "Codex reference is not part of the full factorial matrix. Completion is used as the primary outcome because combined/process have their own score-column caveats.",
+        tags: ["factorial", "model x harness", "interaction"]
+      },
+      {
+        id: "deepswe",
+        label: "DeepSWE",
+        title: "DeepSWE",
+        data: "config x task outcomes with provider, model, reasoning effort, cost, latency, and artifact flags.",
+        takeaway: "A richer config-level audit is supported: paired resolution, rank stability, slices, influence, variance proxy, operational profile, and artifact readiness.",
+        caveat: "Harness is constant, so model x harness interaction is not identifiable. Trace files exist as artifacts, but trajectory parsing is future work.",
+        tags: ["config comparison", "ops", "artifacts"]
+      },
+      {
+        id: "mle",
+        label: "MLE",
+        title: "MLE-Bench",
+        data: "Competition-level grading reports, often selective coverage by system.",
+        takeaway: "Shows whether systems can reliably produce medal-worthy submissions. A lot of signal comes from missing or invalid submissions, not only solution quality.",
+        caveat: "Some top systems have partial task coverage, for example LoongFlow 100% Any Medal on 48/75 tasks in the provided plan. Tiny categories with 1-2 tasks cannot support variance claims.",
+        tags: ["coverage", "validity failures", "Any Medal"]
+      },
+      {
+        id: "tau",
+        label: "τ-bench",
+        title: "τ-bench",
+        data: "Agent LLM plus implementation inside user-simulator and tool/environment loop.",
+        takeaway: "Supports outcome-level rank audit, domain and reward-basis slices, repeated-trial diagnostics when present, task influence, and operational profile.",
+        caveat: "Simulator, domain, reward basis, and environment are part of the measurement instrument. Action paths are diagnostics unless ACTION is in reward_basis.",
+        tags: ["simulator", "domain", "trajectory diagnostics"]
+      }
+    ];
+
+    const dimensionDefs = [
+      { id: "task", label: "task" },
+      { id: "submission", label: "submission" },
+      { id: "run", label: "run" },
+      { id: "model", label: "model" },
+      { id: "harness", label: "harness" },
+      { id: "config", label: "config" },
+      { id: "slice", label: "slice" },
+      { id: "metric", label: "metric" },
+      { id: "ops", label: "ops" },
+      { id: "tau", label: "tau" },
+      { id: "event", label: "event" }
+    ];
+
+    const presets = [
+      { id: "swe", label: "SWE", dimensions: ["task", "submission", "slice"] },
+      { id: "terminal", label: "Terminal", dimensions: ["task", "submission", "run", "ops"] },
+      { id: "harness", label: "Harness", dimensions: ["task", "model", "harness", "metric", "ops"] },
+      { id: "deepswe", label: "DeepSWE", dimensions: ["task", "config", "model", "harness", "slice", "metric", "ops", "tau"] },
+      { id: "mle", label: "MLE", dimensions: ["task", "submission", "run", "slice", "metric", "ops"] },
+      { id: "tau", label: "τ-bench", dimensions: ["task", "run", "model", "slice", "ops", "tau"] }
+    ];
+
+    const capabilities = [
+      {
+        id: "taxonomy-estimand",
+        required: ["task"],
+        requiredAny: [["submission", "config", "model", "harness"]],
+        helpful: ["slice", "metric", "ops", "run", "tau"],
+        question: "What is the measured object, and which fields actually vary?",
+        methods: ["S = M x H x E", "B -> C -> T -> R -> tau -> e", "estimand map"],
+        examples: ["all notebooks"],
+        caveat: "This is the routing layer. It prevents upgrading a submission/config comparison into a pure model claim."
+      },
+      {
+        id: "data-integrity",
+        required: ["task"],
+        helpful: ["ops", "metric", "run", "slice"],
+        question: "Is the outcome table complete, valid, and consistently aggregated?",
+        methods: ["coverage matrix", "missingness audit", "aggregation checks", "scoring sanity"],
+        examples: ["Terminal", "MLE", "Harness", "DeepSWE", "τ-bench"],
+        caveat: "Coverage can look acceptable globally while specific systems, metrics, or slices remain underpowered."
+      },
+      {
+        id: "observed-leaderboard",
+        required: ["task"],
+        requiredAny: [["submission", "config", "model", "harness"]],
+        helpful: ["metric"],
+        question: "What is the descriptive score and displayed rank?",
+        methods: ["task-cell means", "tie-aware rank", "metric selection"],
+        examples: ["SWE", "Terminal", "Harness", "DeepSWE", "MLE", "τ-bench"],
+        caveat: "Point rank is the observed summary, not evidence that nearby systems are separated."
+      },
+      {
+        id: "leaderboard-resolution",
+        required: ["task"],
+        requiredAny: [["submission", "config", "model", "harness"]],
+        helpful: ["metric"],
+        question: "Can the leaderboard resolve the pairwise claims it displays?",
+        methods: ["paired deltas", "adjacent pairs", "all-pairs", "first-vs-rest", "max-T", "Holm/BH", "MDE", "equivalence test"],
+        examples: ["SWE", "Terminal", "DeepSWE", "MLE", "τ-bench"],
+        caveat: "Adjacent non-separation is not equality. Equivalence needs a practical margin and explicit test."
+      },
+      {
+        id: "rank-stability-boundary",
+        required: ["task"],
+        requiredAny: [["submission", "config", "model", "harness"]],
+        helpful: ["slice"],
+        question: "Are ranks, top-K membership, and cutoff boundaries stable?",
+        methods: ["task bootstrap", "rank intervals", "rank heatmap", "top-K probability", "boundary sensitivity"],
+        examples: ["SWE", "Terminal", "DeepSWE", "MLE", "τ-bench"],
+        caveat: "Top-K is a reporting window, not a natural statistical boundary."
+      },
+      {
+        id: "repeated-run-reliability",
+        required: ["task", "run"],
+        helpful: ["submission", "config", "ops"],
+        question: "How much uncertainty comes from task choice versus reruns?",
+        methods: ["nested bootstrap", "variance budget", "pass@k", "K-simulation"],
+        examples: ["Terminal", "MLE", "τ-bench", "DeepSWE proxy"],
+        caveat: "Repeated trials are not independent tasks; run groups may mix reruns with changed systems."
+      },
+      {
+        id: "slice-sensitivity",
+        required: ["task", "slice"],
+        helpful: ["submission", "config", "model", "metric"],
+        question: "Do aggregate claims survive slices, metrics, and influential tasks?",
+        methods: ["powered slices", "metric sensitivity", "ranked-unit sensitivity", "leave-one-out", "effective counts"],
+        examples: ["SWE repo", "DeepSWE provider/effort", "MLE categories", "τ-bench domains"],
+        caveat: "Tiny slices are descriptive and should be marked underpowered rather than reported as precise."
+      },
+      {
+        id: "factor-attribution",
+        required: ["task", "model", "harness"],
+        helpful: ["metric"],
+        question: "Is score a model effect, a harness effect, or their interaction?",
+        methods: ["main effects", "interaction residuals", "ANOVA", "permutation null", "bootstrap effects", "identifiability check"],
+        examples: ["Harness-Bench"],
+        caveat: "Requires crossed variation. A constant harness or submission-only table cannot identify interaction."
+      },
+      {
+        id: "operational-profile",
+        required: ["task", "ops"],
+        helpful: ["submission", "config", "run"],
+        question: "What does the score cost in time, tokens, validity, or failures?",
+        methods: ["cost", "latency", "tokens", "duration", "tool calls", "invalid rate", "Pareto frontier"],
+        examples: ["DeepSWE", "MLE", "τ-bench", "Harness tokens"],
+        caveat: "Operational fields are often missing or benchmark-specific, so compare them as profile data, not universal quality."
+      },
+      {
+        id: "trajectory-events",
+        required: ["task", "tau"],
+        requiredAny: [["event"]],
+        helpful: ["run", "ops"],
+        question: "Why did systems succeed or fail inside the trajectory?",
+        methods: ["artifact readiness", "trace parsing", "tool-path diagnostics", "event taxonomy"],
+        examples: ["DeepSWE artifacts", "τ-bench diagnostics", "future trace audit"],
+        caveat: "Having logs is not the same as having parsed, comparable event-level evidence."
+      }
+    ];
+
+    const methods = [
+      {
+        id: "taxonomy",
+        name: "Taxonomy and estimand",
+        level: "task factor run trajectory",
+        question: "What exactly is being measured before we rank it?",
+        detail: "Use S = M x H x E and B -> C -> T -> R -> tau -> e to stop vague method lists. The taxonomy decides whether the notebook can speak about submissions, configs, pure models, harness interactions, run stochasticity, or traces.",
+        claim: "This is the missing TLDR layer: data shape determines the allowed question.",
+        cells: {
+          swe: ["yes", "submission over 500 tasks"],
+          terminal: ["yes", "submission or agent setup"],
+          harness: ["yes", "model x harness x task"],
+          deepswe: ["yes", "config under constant harness"],
+          mle: ["yes", "system over competitions"],
+          tau: ["yes", "agent plus simulator loop"]
+        }
+      },
+      {
+        id: "baseline",
+        name: "Observed leaderboard",
+        level: "task",
+        question: "What is the descriptive score and displayed rank?",
+        detail: "Compute task-cell means, sort scores, preserve tie-aware rank where relevant. This is descriptive for the observed benchmark, not yet evidence that nearby ranks are meaningfully separated.",
+        claim: "Point rank is the starting view, not the conclusion.",
+        cells: {
+          swe: ["yes", "reconstructed outcome matrix"],
+          terminal: ["yes", "task-level pass rates"],
+          harness: ["yes", "score by model/harness"],
+          deepswe: ["yes", "config or factor leaderboard"],
+          mle: ["yes", "Any Medal default"],
+          tau: ["yes", "reward leaderboard"]
+        }
+      },
+      {
+        id: "pairwise",
+        name: "Paired task comparisons",
+        level: "task",
+        question: "Does A beat B on shared tasks?",
+        detail: "Compare systems on common task cells. Pairing matters because task difficulty is shared across systems and can reduce irrelevant variance in differences.",
+        claim: "Use paired deltas before reading score gaps as evidence.",
+        cells: {
+          swe: ["yes", "McNemar, sign-flip, paired SE"],
+          terminal: ["yes", "paired task pass-rate deltas"],
+          harness: ["yes", "balanced shared tasks"],
+          deepswe: ["yes", "paired config deltas"],
+          mle: ["yes", "shared competitions"],
+          tau: ["yes", "paired task means"]
+        }
+      },
+      {
+        id: "adjacent",
+        name: "Adjacent-rank resolution",
+        level: "task",
+        question: "Are neighboring ranks actually distinguishable?",
+        detail: "Audit rank i vs rank i+1 with paired deltas and uncertainty intervals. This converts the feedback 'show more than point score' into a specific output: which neighbors are separated.",
+        claim: "Often the answer is no: talk about rank bands, not exact places.",
+        cells: {
+          swe: ["yes", "top-30 adjacent audit"],
+          terminal: ["yes", "0/29 after max-T in TLDR"],
+          harness: ["partial", "possible, not central claim"],
+          deepswe: ["yes", "adjacent pairs plus tiers"],
+          mle: ["yes", "adjacent slice of all-pairs"],
+          tau: ["yes", "adjacent systems table"]
+        }
+      },
+      {
+        id: "multiplicity",
+        name: "Multiple-comparison correction",
+        level: "task",
+        question: "Which pairwise claims survive leaderboard-level multiplicity?",
+        detail: "Use max-T family-wise intervals for selected top-N comparisons, with Holm or BH as secondary diagnostics where notebooks include them.",
+        claim: "A raw pairwise p-value is not a leaderboard claim.",
+        cells: {
+          swe: ["yes", "Holm and simultaneous bootstrap"],
+          terminal: ["yes", "Holm and max-T"],
+          harness: ["partial", "factor model focus instead"],
+          deepswe: ["yes", "max-T, Holm, BH"],
+          mle: ["yes", "max-T headline, Holm/BH secondary"],
+          tau: ["partial", "paired resolution, less emphasis"]
+        }
+      },
+      {
+        id: "rank-stability",
+        name: "Task-bootstrap rank stability",
+        level: "task",
+        question: "Do ranks survive task resampling?",
+        detail: "Resample tasks with replacement, recompute scores and ranks, then report rank intervals, rank heatmaps, and top-K probabilities.",
+        claim: "Exact ranks can move while coarse quality groups remain stable.",
+        cells: {
+          swe: ["yes", "repo-stratified sensitivity too"],
+          terminal: ["yes", "nested rank intervals"],
+          harness: ["partial", "available from balanced cells"],
+          deepswe: ["yes", "rank p05-p95 and top-K"],
+          mle: ["yes", "competition bootstrap"],
+          tau: ["yes", "rank intervals and top-K"]
+        }
+      },
+      {
+        id: "bands",
+        name: "Non-separated rank bands",
+        level: "task",
+        question: "What ranking granularity is defensible?",
+        detail: "Merge adjacent ranks that are not separated after the chosen uncertainty and multiplicity layer. This prevents 'not significant' from being misread as equality.",
+        claim: "Report clusters of places when exact local order is not resolved.",
+        cells: {
+          swe: ["yes", "coarse quality structure"],
+          terminal: ["yes", "exact ranks unstable"],
+          harness: ["partial", "less central"],
+          deepswe: ["yes", "rank-band summary"],
+          mle: ["yes", "non-separation bands"],
+          tau: ["partial", "can derive from adjacent checks"]
+        }
+      },
+      {
+        id: "mde",
+        name: "MDE and power scale",
+        level: "task",
+        question: "What effect size can this benchmark plausibly notice?",
+        detail: "Translate paired SE or bootstrap spread into minimum detectable effect. This is the clearest version of 'leaderboard resolution' for a presentation audience.",
+        claim: "If adjacent gaps are far below MDE, do not narrate exact local ranks.",
+        cells: {
+          swe: ["yes", "single-pair and family MDE"],
+          terminal: ["yes", "MDE much larger than adjacent gaps"],
+          harness: ["partial", "effect decomposition is stronger"],
+          deepswe: ["yes", "median 80% MDE"],
+          mle: ["yes", "rough competition-count scale"],
+          tau: ["roadmap", "not a headline block"]
+        }
+      },
+      {
+        id: "topk-boundary",
+        name: "Top-K and boundary sensitivity",
+        level: "task",
+        question: "Is top-K membership stable around the reporting cutoff?",
+        detail: "Check top-K overlap, boundary membership probabilities, and whether systems just outside the displayed window are meaningfully separated from systems inside it.",
+        claim: "Top-K is a reporting choice, not a sharp statistical boundary.",
+        cells: {
+          swe: ["yes", "top-K windows and boundary probabilities"],
+          terminal: ["yes", "top-K sensitivity and boundary membership"],
+          harness: ["partial", "can derive, not headline"],
+          deepswe: ["yes", "top-K probability table"],
+          mle: ["yes", "observed top-K overlap"],
+          tau: ["yes", "top-K probabilities"]
+        }
+      },
+      {
+        id: "first-vs-rest",
+        name: "First-vs-rest resolution",
+        level: "task",
+        question: "How far down the table is the leader actually separated?",
+        detail: "Compare the observed leader against each displayed system using the same paired and multiplicity-aware resolution layer.",
+        claim: "A leader can be separated from distant systems while still tied with near neighbors.",
+        cells: {
+          swe: ["yes", "first-vs-rest experiment"],
+          terminal: ["yes", "first-vs-rest intervals and Holm"],
+          harness: ["partial", "factor decomposition is central"],
+          deepswe: ["partial", "available from all-pairs"],
+          mle: ["yes", "first-vs-rest panel"],
+          tau: ["partial", "available from pairwise table"]
+        }
+      },
+      {
+        id: "equivalence",
+        name: "Equivalence vs non-separation",
+        level: "task",
+        question: "Are non-separated systems practically equivalent?",
+        detail: "Keep difference testing separate from equivalence testing. Equivalence needs a practical margin and an interval or TOST-style decision.",
+        claim: "Not distinguishable is weaker than practically equal.",
+        cells: {
+          swe: ["partial", "explicit caveat, not full TOST block"],
+          terminal: ["yes", "TOST-style adjacent equivalence"],
+          harness: ["partial", "not the design question"],
+          deepswe: ["partial", "practical band caveat"],
+          mle: ["yes", "non-separation is not equivalence block"],
+          tau: ["roadmap", "needs explicit margin"]
+        }
+      },
+      {
+        id: "nested",
+        name: "Nested bootstrap for repeated runs",
+        level: "run",
+        question: "How much uncertainty comes from tasks versus reruns?",
+        detail: "Resample tasks and repeated trials inside task-system cells. Keep repeated trials nested, because five trials on one task are not five independent tasks.",
+        claim: "Repeated runs help, but they do not erase task-composition uncertainty.",
+        cells: {
+          swe: ["no", "single-run public outcomes"],
+          terminal: ["yes", "task plus within-task trials"],
+          harness: ["no", "factorial tasks, not reruns"],
+          deepswe: ["partial", "proxy, not fully crossed"],
+          mle: ["partial", "run groups caveated"],
+          tau: ["partial", "where repeated trials exist"]
+        }
+      },
+      {
+        id: "variance",
+        name: "Variance budget and K-simulation",
+        level: "run",
+        question: "Would more runs per task buy much more resolution?",
+        detail: "Compare between-task variance with within-task repeated-run variance. Simulate how MDE changes as runs per task increase.",
+        claim: "When task variance dominates, adding reruns has diminishing returns.",
+        cells: {
+          swe: ["no", "no repeated runs"],
+          terminal: ["yes", "about 90% task share in TLDR"],
+          harness: ["no", "not the design question"],
+          deepswe: ["yes", "task/run proxy and rollout-return curve"],
+          mle: ["partial", "run-group variance caveat"],
+          tau: ["partial", "pass@k and repeats where present"]
+        }
+      },
+      {
+        id: "coverage",
+        name: "Coverage and missingness audit",
+        level: "task ops",
+        question: "Which cells are missing or selectively observed?",
+        detail: "Report task-system coverage, incomplete systems, missing rewards, invalid submissions, and skipped slices before any rank claim.",
+        claim: "Coverage is part of the result, especially for public leaderboards.",
+        cells: {
+          swe: ["yes", "resolved matrix sanity checks"],
+          terminal: ["yes", "public subset and missing rewards"],
+          harness: ["yes", "balanced matrix sanity check"],
+          deepswe: ["yes", "config-task coverage"],
+          mle: ["yes", "central limitation"],
+          tau: ["yes", "system-task coverage by domain"]
+        }
+      },
+      {
+        id: "slices",
+        name: "Domain and slice heterogeneity",
+        level: "slice",
+        question: "Do aggregate ranks hide different behavior by domain?",
+        detail: "Build slice leaderboards only when the slice has enough tasks and systems. Keep underpowered slices visible as skipped rather than silently reporting noise.",
+        claim: "Slices explain where aggregate claims generalize poorly.",
+        cells: {
+          swe: ["yes", "repo sensitivity appendix"],
+          terminal: ["partial", "available if metadata supports it"],
+          harness: ["yes", "task suite and score-column checks"],
+          deepswe: ["yes", "repository, language, provider, model, effort"],
+          mle: ["partial", "tiny categories caveated"],
+          tau: ["yes", "domain, reward basis, simulator fields"]
+        }
+      },
+      {
+        id: "influence",
+        name: "Task or domain influence",
+        level: "slice",
+        question: "Which tasks or domains move the ranking?",
+        detail: "Leave one task, repo, domain, or competition out, recompute ranks, and measure rank shifts. This is a practical sensitivity audit.",
+        claim: "A stable coarse order can still have local swaps driven by high-leverage tasks.",
+        cells: {
+          swe: ["yes", "leave-one-repo-out"],
+          terminal: ["yes", "task influence"],
+          harness: ["partial", "not headline"],
+          deepswe: ["yes", "task and repository influence"],
+          mle: ["yes", "leave-one-competition-out"],
+          tau: ["yes", "task influence"]
+        }
+      },
+      {
+        id: "metric-sensitivity",
+        name: "Metric / score-column sensitivity",
+        level: "metric",
+        question: "Do conclusions change when the score column or reward basis changes?",
+        detail: "Repeat headline summaries for available metrics or reward bases, and separate outcome metrics from process or diagnostic scores.",
+        claim: "A rank claim is tied to a metric definition, not to an abstract benchmark.",
+        cells: {
+          swe: ["partial", "binary outcome fixed"],
+          terminal: ["partial", "missing-reward convention sensitivity"],
+          harness: ["yes", "completion, process, combined"],
+          deepswe: ["yes", "ranked unit and metric metadata"],
+          mle: ["yes", "Any Medal, Above Median, Valid, Exists"],
+          tau: ["yes", "reward basis and action diagnostics"]
+        }
+      },
+      {
+        id: "aggregation-unit",
+        name: "Aggregation and ranked-unit sensitivity",
+        level: "task metric",
+        question: "Does the result depend on what gets collapsed before ranking?",
+        detail: "Audit duplicate cells, run-group aggregation, selected ranked unit, submission-vs-job distinctions, and config/model aggregation choices.",
+        claim: "Changing the unit of ranking can change the estimand.",
+        cells: {
+          swe: ["partial", "submission-level fixed"],
+          terminal: ["yes", "submission vs job estimand"],
+          harness: ["partial", "model/harness cell means"],
+          deepswe: ["yes", "config vs model sensitivity"],
+          mle: ["yes", "aggregation effects and run groups"],
+          tau: ["yes", "system, agent LLM, strategy rank units"]
+        }
+      },
+      {
+        id: "scoring-sanity",
+        name: "Scoring sanity and failure-mode checks",
+        level: "integrity metric ops",
+        question: "Are score fields, invalid rows, and failure labels internally consistent?",
+        detail: "Check medal logic, missing rewards, invalid submissions, score-column reconstruction, failure categories, and reward-basis caveats before interpreting ranks.",
+        claim: "Bad or ambiguous scoring fields become rank uncertainty if they are not audited.",
+        cells: {
+          swe: ["partial", "matrix reconstruction sanity"],
+          terminal: ["yes", "missing reward sensitivity"],
+          harness: ["yes", "score-column missingness and combined check"],
+          deepswe: ["yes", "artifact and metadata availability"],
+          mle: ["yes", "medal and invalid-submission checks"],
+          tau: ["yes", "reward basis and action caveat"]
+        }
+      },
+      {
+        id: "factorial",
+        name: "Model x harness effect decomposition",
+        level: "factor",
+        question: "Is quality a model property, a harness property, or their interaction?",
+        detail: "Requires crossed model x harness design on shared tasks. Harness-Bench is the example where this is identifiable.",
+        claim: "Without crossed variation, do not claim pure model effects.",
+        cells: {
+          swe: ["no", "submission confounding"],
+          terminal: ["no", "submission or setup confounding"],
+          harness: ["yes", "main contribution"],
+          deepswe: ["no", "harness constant"],
+          mle: ["no", "no crossed scaffold design"],
+          tau: ["no", "agent system includes environment loop"]
+        }
+      },
+      {
+        id: "ops",
+        name: "Operational profile",
+        level: "ops",
+        question: "What does the score cost in money, time, steps, validity, or failures?",
+        detail: "Show cost, tokens, duration, validity, missing submissions, and operational failure rates when fields exist.",
+        claim: "Agent quality is often score plus reliability plus resource profile.",
+        cells: {
+          swe: ["no", "public leaderboard lacks ops fields"],
+          terminal: ["partial", "metadata-dependent"],
+          harness: ["partial", "process/security/tool components"],
+          deepswe: ["yes", "cost, steps, tokens, duration"],
+          mle: ["yes", "missing and invalid submissions"],
+          tau: ["yes", "duration, cost, tool calls when present"]
+        }
+      },
+      {
+        id: "trajectory",
+        name: "Trajectory and event analysis",
+        level: "trajectory",
+        question: "Can we explain failures from traces rather than outcomes?",
+        detail: "Requires trajectory or event logs plus a parsing schema. Artifact availability is not yet the same thing as trace analysis.",
+        claim: "Useful next step, but only after outcome-level claims are correctly scoped.",
+        cells: {
+          swe: ["no", "no traces in public matrix"],
+          terminal: ["partial", "result files, not full trace audit"],
+          harness: ["partial", "paper has process components"],
+          deepswe: ["roadmap", "trajectory files exist, parser pending"],
+          mle: ["no", "grading reports, not traces"],
+          tau: ["partial", "tool/message diagnostics when present"]
+        }
+      },
+      {
+        id: "temporal",
+        name: "Temporal drift / repeated snapshots",
+        level: "temporal",
+        question: "Would the same conclusions hold across benchmark snapshots or dates?",
+        detail: "Requires repeated benchmark snapshots, stable task definitions, and comparable system identifiers over time.",
+        claim: "A single public snapshot cannot estimate temporal drift.",
+        cells: {
+          swe: ["roadmap", "single reconstructed snapshot"],
+          terminal: ["roadmap", "public snapshot only"],
+          harness: ["roadmap", "one paper snapshot"],
+          deepswe: ["roadmap", "timestamps but one eval snapshot"],
+          mle: ["roadmap", "created_at mostly unavailable"],
+          tau: ["roadmap", "needs repeated snapshots"]
+        }
+      }
+    ];
+
+    const statusLabel = {
+      yes: "Included",
+      partial: "Partial",
+      no: "Unsupported",
+      roadmap: "Roadmap"
+    };
+
+    const tbody = document.querySelector("#matrix tbody");
+    const methodPanel = document.querySelector("#methodPanel");
+    const benchTabs = document.querySelector(".bench-tabs");
+    const benchDetail = document.querySelector("#benchDetail");
+    const dimensionToggles = document.querySelector("#dimensionToggles");
+    const presetButtons = document.querySelector("#presetButtons");
+    const selectedDimensionsText = document.querySelector("#selectedDimensionsText");
+    const capabilityRows = document.querySelector("#capabilityRows");
+    const search = document.querySelector("#search");
+    const benchFilter = document.querySelector("#benchFilter");
+    const levelFilter = document.querySelector("#levelFilter");
+    const statusFilter = document.querySelector("#statusFilter");
+    const controls = document.querySelector(".controls");
+
+    const capabilityStatusLabel = {
+      supported: "Supported",
+      partial: "Partial",
+      locked: "Locked"
+    };
+
+    const dimensionLabel = Object.fromEntries(dimensionDefs.map((dimension) => [dimension.id, dimension.label]));
+    let selectedDimensions = new Set(["task", "submission", "slice"]);
+    let activePreset = "swe";
+
+    function tokenList(items, className = "") {
+      if (!items.length) return `<span>none</span>`;
+      return `<div class="tokens">${items.map((item) => `<span class="token ${className}">${dimensionLabel[item] || item}</span>`).join("")}</div>`;
+    }
+
+    function pillList(items) {
+      if (!items.length) return `<span>none</span>`;
+      return `<ul class="method-list">${items.map((item) => `<li class="method-pill">${item}</li>`).join("")}</ul>`;
+    }
+
+    function requirementParts(capability) {
+      const required = capability.required || [];
+      const anyGroups = capability.requiredAny || [];
+      return [
+        ...required.map((id) => dimensionLabel[id] || id),
+        ...anyGroups.map((group) => group.map((id) => dimensionLabel[id] || id).join(" or "))
+      ];
+    }
+
+    function requirementText(capability) {
+      return requirementParts(capability).join(" + ");
+    }
+
+    function sameSet(left, right) {
+      if (left.size !== right.length) return false;
+      return right.every((item) => left.has(item));
+    }
+
+    function syncActivePreset() {
+      const match = presets.find((preset) => sameSet(selectedDimensions, preset.dimensions));
+      activePreset = match ? match.id : "";
+    }
+
+    function capabilityStatus(capability) {
+      const required = capability.required || [];
+      const requiredAny = capability.requiredAny || [];
+      const missingRequired = required.filter((dimension) => !selectedDimensions.has(dimension));
+      const missingAny = requiredAny
+        .filter((group) => !group.some((dimension) => selectedDimensions.has(dimension)))
+        .map((group) => group.map((dimension) => dimensionLabel[dimension] || dimension).join(" or "));
+      const missingRequiredLabels = [...missingRequired, ...missingAny];
+      if (missingRequiredLabels.length) {
+        return { status: "locked", missingRequired: missingRequiredLabels, missingHelpful: [] };
+      }
+      const missingHelpful = (capability.helpful || []).filter((dimension) => !selectedDimensions.has(dimension));
+      return {
+        status: missingHelpful.length ? "partial" : "supported",
+        missingRequired,
+        missingHelpful
+      };
+    }
+
+    function renderDimensionControls() {
+      dimensionToggles.innerHTML = dimensionDefs.map((dimension) => `
+        <button class="dimension-toggle" type="button" data-dimension="${dimension.id}" aria-pressed="${selectedDimensions.has(dimension.id)}">
+          ${dimension.label}
+        </button>
+      `).join("");
+
+      document.querySelectorAll(".dimension-toggle").forEach((button) => {
+        button.addEventListener("click", () => {
+          const dimension = button.dataset.dimension;
+          if (selectedDimensions.has(dimension)) {
+            selectedDimensions.delete(dimension);
+          } else {
+            selectedDimensions.add(dimension);
+          }
+          syncActivePreset();
+          renderDimensionControls();
+          renderPresetButtons();
+          renderCapabilities();
+        });
+      });
+
+      selectedDimensionsText.textContent = `Selected: ${[...selectedDimensions].map((id) => dimensionLabel[id]).join(" x ") || "none"}`;
+    }
+
+    function renderPresetButtons() {
+      presetButtons.innerHTML = presets.map((preset) => `
+        <button class="preset-button" type="button" data-preset="${preset.id}" aria-pressed="${activePreset === preset.id}">
+          ${preset.label}
+        </button>
+      `).join("");
+
+      document.querySelectorAll(".preset-button").forEach((button) => {
+        button.addEventListener("click", () => {
+          const preset = presets.find((item) => item.id === button.dataset.preset);
+          if (!preset) return;
+          selectedDimensions = new Set(preset.dimensions);
+          activePreset = preset.id;
+          renderDimensionControls();
+          renderPresetButtons();
+          renderCapabilities();
+        });
+      });
+    }
+
+    function renderCapabilities() {
+      capabilityRows.innerHTML = capabilities.map((capability) => {
+        const state = capabilityStatus(capability);
+        const needs = state.status === "locked"
+          ? `<strong>Missing required</strong>${tokenList(state.missingRequired, "missing-token")}`
+          : state.status === "partial"
+            ? `<strong>Helpful dimensions missing</strong>${tokenList(state.missingHelpful, "helpful-token")}`
+            : `<strong>Ready with selected data</strong>${tokenList(requirementParts(capability))}`;
+
+        return `
+          <div class="capability-row ${state.status}" role="row" data-capability="${capability.id}">
+            <div role="cell" class="capability-status">
+              <span class="capability-badge">${capabilityStatusLabel[state.status]}</span>
+              <span>${state.status === "locked" ? "not yet defensible" : state.status === "partial" ? "usable with caveat" : "claim supported"}</span>
+            </div>
+            <div role="cell">
+              <strong>${capability.question}</strong>
+              <span>Requires ${requirementText(capability)}.</span>
+            </div>
+            <div role="cell">${pillList(capability.methods)}</div>
+            <div role="cell">${needs}</div>
+            <div role="cell">
+              ${pillList(capability.examples)}
+              <span>${capability.caveat}</span>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function setStickyOffset() {
+      const position = controls ? getComputedStyle(controls).position : "static";
+      const offset = controls && position === "sticky" ? Math.ceil(controls.getBoundingClientRect().height) : 0;
+      document.documentElement.style.setProperty("--controls-offset", `${offset}px`);
+    }
+
+    function cellHtml(method, benchId) {
+      const [status, note] = method.cells[benchId];
+      return `<td class="${status}"><div class="status"><span class="badge">${statusLabel[status]}</span><span>${note}</span></div></td>`;
+    }
+
+    function renderRows() {
+      tbody.innerHTML = methods.map((method) => `
+        <tr class="method-row" tabindex="0" data-id="${method.id}" data-level="${method.level}" data-text="${[
+          method.name, method.question, method.detail, method.claim,
+          ...Object.values(method.cells).flat()
+        ].join(" ").toLowerCase()}">
+          <td>
+            <div class="method-name">
+              <strong>${method.name}</strong>
+              <small>${method.question}</small>
+            </div>
+          </td>
+          ${benches.map((bench) => cellHtml(method, bench.id)).join("")}
+        </tr>
+      `).join("");
+
+      document.querySelectorAll(".method-row").forEach((row) => {
+        row.addEventListener("click", () => selectMethod(row.dataset.id));
+        row.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            selectMethod(row.dataset.id);
+          }
+        });
+      });
+    }
+
+    function selectMethod(id) {
+      const method = methods.find((item) => item.id === id);
+      if (!method) return;
+      const statuses = benches.map((bench) => {
+        const [status, note] = method.cells[bench.id];
+        return `<li><b>${bench.title}:</b> ${statusLabel[status]}. ${note}</li>`;
+      }).join("");
+
+      methodPanel.innerHTML = `
+        <h2>${method.name}</h2>
+        <p>${method.detail}</p>
+        <ul>
+          <li><b>Claim:</b> ${method.claim}</li>
+          ${statuses}
+        </ul>
+      `;
+    }
+
+    function renderBenchTabs() {
+      benchTabs.innerHTML = benches.map((bench, index) => `
+        <button class="bench-tab" role="tab" aria-selected="${index === 0 ? "true" : "false"}" data-id="${bench.id}">
+          ${bench.label}
+        </button>
+      `).join("");
+      document.querySelectorAll(".bench-tab").forEach((tab) => {
+        tab.addEventListener("click", () => selectBench(tab.dataset.id));
+      });
+      selectBench(benches[0].id);
+    }
+
+    function selectBench(id) {
+      const bench = benches.find((item) => item.id === id);
+      if (!bench) return;
+      document.querySelectorAll(".bench-tab").forEach((tab) => {
+        tab.setAttribute("aria-selected", String(tab.dataset.id === id));
+      });
+      benchDetail.innerHTML = `
+        <h3>${bench.title}</h3>
+        <p><b>Data:</b> ${bench.data}</p>
+        <p><b>Takeaway:</b> ${bench.takeaway}</p>
+        <p><b>Caveat:</b> ${bench.caveat}</p>
+        <div class="chips">${bench.tags.map((tag) => `<span class="chip">${tag}</span>`).join("")}</div>
+      `;
+    }
+
+    function applyFilters() {
+      const q = search.value.trim().toLowerCase();
+      const bench = benchFilter.value;
+      const level = levelFilter.value;
+      const status = statusFilter.value;
+
+      document.querySelectorAll(".method-row").forEach((row) => {
+        const method = methods.find((item) => item.id === row.dataset.id);
+        const matchesSearch = !q || row.dataset.text.includes(q);
+        const matchesLevel = level === "all" || row.dataset.level.split(" ").includes(level);
+        const matchesStatus = status === "all" || Object.values(method.cells).some(([cellStatus]) => cellStatus === status);
+        const matchesBench = bench === "all" || method.cells[bench][0] !== "no";
+        row.classList.toggle("hidden", !(matchesSearch && matchesLevel && matchesStatus && matchesBench));
+      });
+      setStickyOffset();
+    }
+
+    [search, benchFilter, levelFilter, statusFilter].forEach((control) => {
+      control.addEventListener("input", applyFilters);
+      control.addEventListener("change", applyFilters);
+    });
+
+    window.addEventListener("resize", setStickyOffset);
+    if ("ResizeObserver" in window && controls) {
+      new ResizeObserver(setStickyOffset).observe(controls);
+    }
+
+    renderDimensionControls();
+    renderPresetButtons();
+    renderCapabilities();
+    renderRows();
+    renderBenchTabs();
+    selectMethod("taxonomy");
+    setStickyOffset();
+  </script>
+</body>
+</html>
